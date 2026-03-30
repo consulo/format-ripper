@@ -28,7 +28,7 @@ class MachoSignatureVerifierTests {
     try (var channel = Files.newByteChannel(TestUtil.getTestDataFile("mach-o", machoResourceName), StandardOpenOption.READ)) {
       Collection<MachoFile> machoFiles = new MachoArch(channel).Extract();
       SignatureVerificationParams verificationParams = new SignatureVerificationParams(null, null, false, false);
-      SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier(ConsoleLogger.Instance);
+      SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
 
       for (MachoFile machoFile : machoFiles) {
         var signatureData = machoFile.GetSignatureData();
@@ -62,7 +62,7 @@ class MachoSignatureVerifierTests {
       List<VerifySignatureStatus> results = new ArrayList<>();
       try (SeekableByteChannel machOFileStream = TestUtil.getTestByteChannel("mach-o", machOResourceName)) {
         Collection<MachoFile> machoFiles = new MachoArch(machOFileStream).Extract();
-        SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier(ConsoleLogger.Instance);
+        SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
 
         for (MachoFile machoFile : machoFiles) {
           var signatureData = machoFile.GetSignatureData();

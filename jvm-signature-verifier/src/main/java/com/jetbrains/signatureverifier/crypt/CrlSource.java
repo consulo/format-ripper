@@ -1,7 +1,7 @@
 package com.jetbrains.signatureverifier.crypt;
 
-import com.jetbrains.signatureverifier.ILogger;
-import com.jetbrains.signatureverifier.NullLogger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -9,15 +9,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 public class CrlSource {
-  private final ILogger _logger;
-
-  public CrlSource() {
-    this(NullLogger.Instance);
-  }
-
-  public CrlSource(ILogger logger) {
-    _logger = logger != null ? logger : NullLogger.Instance;
-  }
+  private static final Logger LOG = LoggerFactory.getLogger(CrlSource.class);
 
   public byte[] GetCrlAsync(String url) throws Exception {
     try {
@@ -26,7 +18,7 @@ public class CrlSource {
       HttpResponse<byte[]> response = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofByteArray()).join();
 
       if (response.statusCode() != 200) {
-        _logger.Warning("CRL downloading fail from " + url + " Status: " + response.statusCode());
+        LOG.warn("CRL downloading fail from {} Status: {}", url, response.statusCode());
         return null;
       }
       return response.body();

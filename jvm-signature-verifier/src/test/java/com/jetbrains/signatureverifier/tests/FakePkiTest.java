@@ -67,7 +67,7 @@ class FakePkiTest {
 
       try (InputStream signRootCertStore = getRootStoreStream(pki.getCertificate())) {
         SignatureVerificationParams verificationParams = new SignatureVerificationParams(signRootCertStore, null, true, false);
-        SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier(ConsoleLogger.Instance);
+        SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
         var res = signedMessageVerifier.VerifySignatureAsync(signedMessage, verificationParams);
         Assertions.assertEquals(VerifySignatureStatus.InvalidSignature, res.Status());
       }
@@ -103,7 +103,7 @@ class FakePkiTest {
       try (InputStream signRootCertStore = getRootStoreStream(pki.getCertificate())) {
         SignatureVerificationParams verificationParams = new SignatureVerificationParams(signRootCertStore, null, true, true);
         SignedMessageVerifier signedMessageVerifier =
-          new SignedMessageVerifier(new CrlProvider(crlSource, crlCache, ConsoleLogger.Instance), ConsoleLogger.Instance);
+          new SignedMessageVerifier(new CrlProvider(crlSource, crlCache));
         var res = signedMessageVerifier.VerifySignatureAsync(signedMessage, verificationParams);
         Assertions.assertEquals(VerifySignatureStatus.InvalidChain, res.Status());
       }
@@ -127,7 +127,7 @@ class FakePkiTest {
       var signatureData = peFile.GetSignatureData();
       var signedMessage = SignedMessage.CreateInstance(signatureData);
       SignatureVerificationParams verificationParams = new SignatureVerificationParams(null, null, false, false);
-      SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier(ConsoleLogger.Instance);
+      SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
       var res = signedMessageVerifier.VerifySignatureAsync(signedMessage, verificationParams);
       Assertions.assertEquals(VerifySignatureStatus.InvalidSignature, res.Status());
     }

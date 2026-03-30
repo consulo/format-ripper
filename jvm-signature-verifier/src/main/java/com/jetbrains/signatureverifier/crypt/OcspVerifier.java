@@ -1,8 +1,6 @@
 package com.jetbrains.signatureverifier.crypt;
 
-import com.jetbrains.signatureverifier.ILogger;
 import com.jetbrains.signatureverifier.Messages;
-import com.jetbrains.signatureverifier.NullLogger;
 import org.bouncycastle.asn1.ASN1Enumerated;
 import org.bouncycastle.asn1.oiw.OIWObjectIdentifiers;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
@@ -10,6 +8,8 @@ import org.bouncycastle.asn1.x509.CRLReason;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.ocsp.*;
 import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -21,16 +21,16 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 
 public class OcspVerifier {
+  private static final Logger LOG = LoggerFactory.getLogger(OcspVerifier.class);
+
   private static final String OCSP_REQUEST_TYPE = "application/ocsp-request";
   private static final String OCSP_RESPONSE_TYPE = "application/ocsp-response";
 
   private Duration _ocspResponseTimeout = Duration.ZERO;
-  private final ILogger _logger;
   private final Duration ocspResponseCorrectSpan = Duration.ofMinutes(1);
 
-  public OcspVerifier(Duration ocspResponseTimeout, ILogger logger) {
+  public OcspVerifier(Duration ocspResponseTimeout) {
     _ocspResponseTimeout = ocspResponseTimeout;
-    _logger = logger != null ? logger : NullLogger.Instance;
   }
 
   public VerifySignatureResult CheckCertificateRevocationStatusAsync(
@@ -39,8 +39,8 @@ public class OcspVerifier {
 
     String ocspUrl = BcExt.GetOcspUrl(targetCert);
     if (ocspUrl == null) {
-      _logger.Warning("The OCSP access data is empty in certificate " + BcExt.FormatId(targetCert));
-      _logger.Error(Messages.unable_determin_certificate_revocation_status);
+      LOG.warn("The OCSP access data is empty in certificate {}", BcExt.FormatId(targetCert));
+      LOG.error(Messages.unable_determin_certificate_revocation_status);
       return VerifySignatureResult.InvalidChain(Messages.unable_determin_certificate_revocation_status);
     }
 
@@ -56,13 +56,13 @@ public class OcspVerifier {
     OCSPResp ocspRes = getOcspResponseAsync(ocspUrl, ocspReq, _ocspResponseTimeout);
 
     if (ocspRes == null || ocspRes.getStatus() != OCSPResp.SUCCESSFUL) {
-      _logger.Error("OCSP response status: " + (ocspRes != null ? ocspRes.getStatus() : "null"));
+      LOG.error("OCSP response status: {}", ocspRes != null ? ocspRes.getStatus() : "null");
       return VerifySignatureResult.InvalidChain(Messages.unable_determin_certificate_revocation_status);
     }
 
     BasicOCSPResp basicOcspResp = (BasicOCSPResp) ocspRes.getResponseObject();
     if (basicOcspResp == null) {
-      _logger.Error("Unknown OCSP response type");
+      LOG.error("Unknown OCSP response type");
       return VerifySignatureResult.InvalidChain(Messages.unable_determin_certificate_revocation_status);
     }
 
@@ -77,7 +77,7 @@ public class OcspVerifier {
     }
 
     if (singleResponses.isEmpty()) {
-      _logger.Error("OCSP response not correspond to request");
+      LOG.error("OCSP response not correspond to request");
       return VerifySignatureResult.InvalidChain(Messages.invalid_ocsp_response);
     }
 
@@ -89,12 +89,12 @@ public class OcspVerifier {
       if (certStatus == null) {
         continue;
       } else if (certStatus instanceof UnknownStatus) {
-        _logger.Warning(Messages.unknown_certificate_revocation_status);
+        LOG.warn(Messages.unknown_certificate_revocation_status);
         return VerifySignatureResult.InvalidChain(Messages.unknown_certificate_revocation_status);
       } else if (certStatus instanceof RevokedStatus) {
         RevokedStatus certRevStatus = (RevokedStatus) certStatus;
         String msg = formatRevokedStatus(certRevStatus);
-        _logger.Warning(msg);
+        LOG.warn(msg);
         return VerifySignatureResult.InvalidChain(msg);
       }
     }
@@ -112,10 +112,10 @@ public class OcspVerifier {
 
   private OCSPResp getOcspResponseAsync(String ocspResponderUrl, OCSPReq ocspRequest, Duration timeout) throws Exception {
     if (!ocspResponderUrl.startsWith("http")) {
-      _logger.Error("Only http(s) is supported for OCSP calls");
+      LOG.error("Only http(s) is supported for OCSP calls");
       return null;
     }
-    _logger.Trace("OCSP request: " + ocspResponderUrl);
+    LOG.trace("OCSP request: {}", ocspResponderUrl);
     try {
       byte[] array = ocspRequest.getEncoded();
       HttpClient httpClient = HttpClient.newBuilder().connectTimeout(timeout).build();
@@ -130,7 +130,7 @@ public class OcspVerifier {
       return new OCSPResp(responseData);
     } catch (Exception ex) {
       String msg = "Cannot get OCSP response for url: " + ocspResponderUrl;
-      _logger.Error(msg);
+      LOG.error(msg);
       throw new Exception(msg, ex);
     }
   }
@@ -138,21 +138,21 @@ public class OcspVerifier {
   private boolean validateOcspResponse(BasicOCSPResp ocspResp) throws Exception {
     X509CertificateHolder issuerCert = getOcspIssuerCert(ocspResp);
     if (issuerCert == null) {
-      _logger.Error("OCSP issuer certificate not found in response");
+      LOG.error("OCSP issuer certificate not found in response");
       return false;
     }
     if (!BcExt.CanSignOcspResponses(issuerCert)) {
-      _logger.Error("OCSP issuer certificate is not applicable. RFC 6960 3.2");
+      LOG.error("OCSP issuer certificate is not applicable. RFC 6960 3.2");
       return false;
     }
     if (!issuerCert.isValidOn(Utils.ConvertToDate(nowUtc()))) {
-      _logger.Error("OCSP issuer certificate is not valid now. RFC 6960 3.2");
+      LOG.error("OCSP issuer certificate is not valid now. RFC 6960 3.2");
       return false;
     }
 
     JcaContentVerifierProviderBuilder verifierBuilder = new JcaContentVerifierProviderBuilder();
     if (!ocspResp.isSignatureValid(verifierBuilder.build(issuerCert))) {
-      _logger.Error("OCSP with invalid signature! RFC 6960 3.2");
+      LOG.error("OCSP with invalid signature! RFC 6960 3.2");
       return false;
     }
     return true;
@@ -162,7 +162,7 @@ public class OcspVerifier {
     LocalDateTime nowInGmt = nowUtc();
     if (singleResp.getNextUpdate() != null
       && singleResp.getNextUpdate().before(Utils.ConvertToDate(nowInGmt))) {
-      _logger.Error("OCSP response is no longer valid. RFC 6960 4.2.2.1.");
+      LOG.error("OCSP response is no longer valid. RFC 6960 4.2.2.1.");
       return false;
     }
     Duration diff = Duration.between(
@@ -170,8 +170,8 @@ public class OcspVerifier {
       nowInGmt
     ).abs();
     if (diff.compareTo(ocspResponseCorrectSpan) > 0) {
-      _logger.Error("OCSP response signature is from the future. Timestamp of thisUpdate field: "
-        + singleResp.getThisUpdate() + ". RFC 6960 4.2.2.1.");
+      LOG.error("OCSP response signature is from the future. Timestamp of thisUpdate field: {}. RFC 6960 4.2.2.1.",
+        singleResp.getThisUpdate());
       return false;
     }
     return true;

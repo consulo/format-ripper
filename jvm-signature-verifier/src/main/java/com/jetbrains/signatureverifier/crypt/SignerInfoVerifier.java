@@ -1,8 +1,6 @@
 package com.jetbrains.signatureverifier.crypt;
 
-import com.jetbrains.signatureverifier.ILogger;
 import com.jetbrains.signatureverifier.Messages;
-import com.jetbrains.signatureverifier.NullLogger;
 import com.jetbrains.signatureverifier.bouncycastle.cms.SignerInformation;
 import com.jetbrains.signatureverifier.bouncycastle.tsp.TimeStampToken;
 import org.bouncycastle.asn1.ASN1Encodable;
@@ -19,6 +17,8 @@ import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
 import org.bouncycastle.tsp.TSPException;
 import org.bouncycastle.util.Selector;
 import org.bouncycastle.util.Store;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.security.cert.*;
 import java.util.ArrayList;
@@ -27,10 +27,11 @@ import java.util.Date;
 import java.util.List;
 
 public class SignerInfoVerifier {
+  private static final Logger LOG = LoggerFactory.getLogger(SignerInfoVerifier.class);
+
   private final SignerInformation _signer;
   private final Store<X509CertificateHolder> _certs;
   private final CrlProvider _crlProvider;
-  private final ILogger _logger;
 
   // lazy fields
   private boolean _timeStampTokenComputed = false;
@@ -41,12 +42,10 @@ public class SignerInfoVerifier {
   public SignerInfoVerifier(
     SignerInformation signer,
     Store<X509CertificateHolder> certs,
-    CrlProvider crlProvider,
-    ILogger logger) {
+    CrlProvider crlProvider) {
     _signer = signer;
     _certs = certs;
     _crlProvider = crlProvider;
-    _logger = logger != null ? logger : NullLogger.Instance;
   }
 
   public VerifySignatureResult VerifyAsync(SignatureVerificationParams signatureVerificationParams) throws Exception {
@@ -54,7 +53,7 @@ public class SignerInfoVerifier {
     List<X509CertificateHolder> certList =
       new ArrayList<>(_certs.getMatches((Selector<X509CertificateHolder>) _signer.getSID()));
     if (certList.isEmpty()) {
-      _logger.Error(Messages.signer_cert_not_found);
+      LOG.error(Messages.signer_cert_not_found);
       return new VerifySignatureResult(VerifySignatureStatus.InvalidSignature, Messages.signer_cert_not_found);
     }
     X509CertificateHolder cert = certList.get(0);
@@ -97,7 +96,7 @@ public class SignerInfoVerifier {
     if (signValidationTime != null)
       params.SetSignValidationTime(Utils.ConvertToLocalDateTime(signValidationTime));
     else
-      _logger.Warning("Unknown sign validation time");
+      LOG.warn("Unknown sign validation time");
   }
 
   private VerifySignatureResult verifyNestedSignsAsync(SignatureVerificationParams params) throws Exception {
@@ -119,7 +118,7 @@ public class SignerInfoVerifier {
       org.bouncycastle.asn1.ASN1Set attrValues = nestedSignAttr.getAttrValues();
       for (int j = 0; j < attrValues.size(); j++) {
         SignedMessage nestedSignedMessage = new SignedMessage(attrValues.getObjectAt(j).toASN1Primitive());
-        VerifySignatureResult result = new SignedMessageVerifier(_crlProvider, _logger)
+        VerifySignatureResult result = new SignedMessageVerifier(_crlProvider)
           .VerifySignatureAsync(nestedSignedMessage, params);
         if (result.NotValid()) return result;
       }
@@ -129,7 +128,7 @@ public class SignerInfoVerifier {
 
   private VerifySignatureResult verifyCounterSignAsync(SignatureVerificationParams params) throws Exception {
     for (SignerInformation signerInfo : getCounterSignatures()) {
-      SignerInfoVerifier siv = new SignerInfoVerifier(signerInfo, _certs, _crlProvider, _logger);
+      SignerInfoVerifier siv = new SignerInfoVerifier(signerInfo, _certs, _crlProvider);
       VerifySignatureResult res = siv.VerifyAsync(params);
       if (res.NotValid()) return res;
     }
@@ -174,8 +173,8 @@ public class SignerInfoVerifier {
     Store<X509CertificateHolder> intermediateCertsStore,
     SignatureVerificationParams params) throws Exception {
 
-    _logger.Trace("Signature validation time: "
-      + Utils.ToString(params.SignatureValidationTime, "dd.MM.uuuu HH:mm:ss"));
+    LOG.trace("Signature validation time: {}",
+      Utils.ToString(params.SignatureValidationTime, "dd.MM.uuuu HH:mm:ss"));
 
     CustomPkixBuilderParameters builderParams = new CustomPkixBuilderParameters(
       params.getRootCertificates(),
@@ -191,14 +190,14 @@ public class SignerInfoVerifier {
       PKIXCertPathBuilderResult chain = (PKIXCertPathBuilderResult) builder.build(builderParams);
 
       if (useOCSP) {
-        _logger.Trace("Start OCSP for certificate " + BcExt.FormatId(primary));
+        LOG.trace("Start OCSP for certificate {}", BcExt.FormatId(primary));
         X509CertificateHolder issuerCert = getIssuerCert(chain, primary);
-        return new OcspVerifier(params.OcspResponseTimeout, _logger)
+        return new OcspVerifier(params.OcspResponseTimeout)
           .CheckCertificateRevocationStatusAsync(primary, issuerCert);
       }
       return VerifySignatureResult.Valid;
     } catch (CertPathBuilderException ex) {
-      _logger.Error("Build chain for certificate was failed. " + BcExt.FormatId(primary) + " " + Utils.FlatMessages(ex));
+      LOG.error("Build chain for certificate was failed. {} {}", BcExt.FormatId(primary), Utils.FlatMessages(ex));
       return VerifySignatureResult.InvalidChain(Utils.FlatMessages(ex));
     }
   }

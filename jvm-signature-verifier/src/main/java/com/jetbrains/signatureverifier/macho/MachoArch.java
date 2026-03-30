@@ -1,9 +1,7 @@
 package com.jetbrains.signatureverifier.macho;
 
 import com.jetbrains.signatureverifier.DataInfo;
-import com.jetbrains.signatureverifier.ILogger;
 import com.jetbrains.signatureverifier.InvalidDataException;
-import com.jetbrains.signatureverifier.NullLogger;
 import com.jetbrains.util.filetype.io.BinaryReader;
 import com.jetbrains.util.filetype.io.ReadUtils;
 import com.jetbrains.util.filetype.io.SeekOrigin;
@@ -21,21 +19,14 @@ import java.util.List;
  */
 public class MachoArch {
   private final SeekableByteChannel _stream;
-  private final ILogger _logger;
 
   /**
    * Initializes a new instance of the MachoArch
    *
    * @param stream An input stream
-   * @param logger A logger
    */
-  public MachoArch(SeekableByteChannel stream, ILogger logger) {
-    _stream = stream;
-    _logger = logger != null ? logger : NullLogger.Instance;
-  }
-
   public MachoArch(SeekableByteChannel stream) {
-    this(stream, null);
+    _stream = stream;
   }
 
   /**

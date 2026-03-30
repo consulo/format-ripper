@@ -12,6 +12,7 @@ module format.ripper.jvm.signature.verifier {
     requires org.apache.commons.io;
 
     requires java.net.http;
+    requires org.slf4j;
 
     exports com.jetbrains.signatureverifier.cf;
     exports com.jetbrains.signatureverifier.bouncycastle.cms;

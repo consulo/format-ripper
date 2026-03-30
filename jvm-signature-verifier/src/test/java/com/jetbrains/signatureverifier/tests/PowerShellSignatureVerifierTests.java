@@ -49,7 +49,7 @@ class PowerShellSignatureVerifierTests {
       if (result.NotValid()) {
         return result;
       }
-      SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier(ConsoleLogger.Instance);
+      SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
       return signedMessageVerifier.VerifySignatureAsync(signedMessage, simpleVerificationParams);
     }
   }
@@ -62,7 +62,7 @@ class PowerShellSignatureVerifierTests {
         return new VerifySignatureResult(VerifySignatureStatus.InvalidSignature, "Cannot extract signature from file");
       }
       SignedMessage signedMessage = SignedMessage.CreateInstance(signatureData);
-      SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier(ConsoleLogger.Instance);
+      SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
       return signedMessageVerifier.VerifySignatureAsync(signedMessage, getChainVerificationParams());
     }
   }

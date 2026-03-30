@@ -30,7 +30,7 @@ class PeSignatureVerifierTests {
       PeFile peFile = new PeFile(channel);
       var signatureData = peFile.GetSignatureData();
       var signedMessage = SignedMessage.CreateInstance(signatureData);
-      SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier(ConsoleLogger.Instance);
+      SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
       var result = signedMessageVerifier.VerifySignatureAsync(signedMessage, verificationParams);
       Assertions.assertEquals(expectedResult, result.Status());
     }
@@ -50,7 +50,7 @@ class PeSignatureVerifierTests {
       PeFile peFile = new PeFile(peFileStream);
       var signatureData = peFile.GetSignatureData();
       var signedMessage = SignedMessage.CreateInstance(signatureData);
-      SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier(ConsoleLogger.Instance);
+      SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
       var result = signedMessageVerifier.VerifySignatureAsync(signedMessage, verificationParams);
       Assertions.assertEquals(expectedResult, result.Status());
     }
@@ -110,7 +110,7 @@ class PeSignatureVerifierTests {
       PeFile peFile = new PeFile(peFileStream);
       var signatureData = peFile.GetSignatureData();
       var signedMessage = SignedMessage.CreateInstance(signatureData);
-      SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier(ConsoleLogger.Instance);
+      SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
       return signedMessageVerifier.VerifySignatureAsync(signedMessage, verificationParams);
     }
   }

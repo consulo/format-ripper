@@ -23,7 +23,7 @@ class MsiSignatureVerifierTests {
       MsiFile msiFile = new MsiFile(channel);
       var signatureData = msiFile.GetSignatureData();
       var signedMessage = SignedMessage.CreateInstance(signatureData);
-      SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier(ConsoleLogger.Instance);
+      SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
       var result = signedMessageVerifier.VerifySignatureAsync(signedMessage, verificationParams);
       Assertions.assertEquals(expectedResult, result.Status());
     }
