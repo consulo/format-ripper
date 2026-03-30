@@ -2,7 +2,6 @@ package com.jetbrains.signatureverifier.tests;
 
 import com.jetbrains.signatureverifier.crypt.BcExt;
 import com.jetbrains.signatureverifier.powershell.PowerShellScriptFile;
-import com.jetbrains.util.filetype.TestUtil;
 import org.apache.commons.io.ByteOrderMark;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;

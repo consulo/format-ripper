@@ -9,7 +9,6 @@ import com.jetbrains.signatureverifier.crypt.SignedMessageVerifier;
 import com.jetbrains.signatureverifier.crypt.Utils;
 import com.jetbrains.signatureverifier.crypt.VerifySignatureResult;
 import com.jetbrains.signatureverifier.crypt.VerifySignatureStatus;
-import com.jetbrains.util.filetype.TestUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
