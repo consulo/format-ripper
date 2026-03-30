@@ -1,0 +1,12 @@
+*.orig
+.vs/
+.idea/
+_ReSharper.Caches/
+obj/
+bin/
+packages/
+*.user
+*.nuget
+.DS_Store
+.consulo/
+target/
