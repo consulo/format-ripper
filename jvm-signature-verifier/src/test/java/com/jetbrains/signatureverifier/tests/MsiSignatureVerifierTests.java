@@ -21,11 +21,11 @@ class MsiSignatureVerifierTests {
     try (var channel = TestUtil.getTestByteChannel("msi", resourceName)) {
       SignatureVerificationParams verificationParams = new SignatureVerificationParams(null, null, false, false);
       MsiFile msiFile = new MsiFile(channel);
-      var signatureData = msiFile.GetSignatureData();
-      var signedMessage = SignedMessage.CreateInstance(signatureData);
+      var signatureData = msiFile.getSignatureData();
+      var signedMessage = SignedMessage.createInstance(signatureData);
       SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
-      var result = signedMessageVerifier.VerifySignatureAsync(signedMessage, verificationParams);
-      Assertions.assertEquals(expectedResult, result.Status());
+      var result = signedMessageVerifier.verifySignatureAsync(signedMessage, verificationParams);
+      Assertions.assertEquals(expectedResult, result.getStatus());
     }
   }
 
@@ -35,7 +35,7 @@ class MsiSignatureVerifierTests {
     try (var channel = TestUtil.getTestByteChannel("msi", resourceName)) {
       MsiFile msiFile = new MsiFile(channel);
       byte[] result = msiFile.ComputeHash(alg, true);
-      Assertions.assertEquals(expectedResult, BcExt.ConvertToHexString(result).toUpperCase());
+      Assertions.assertEquals(expectedResult, BcExt.convertToHexString(result).toUpperCase());
     }
   }
 

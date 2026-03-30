@@ -11,8 +11,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class CustomPkixBuilderParameters extends PKIXBuilderParameters {
-  private final Store<X509CertificateHolder> _intermediateCertsStore;
-  private final X509CertSelector _primaryCert;
+  private final Store<X509CertificateHolder> intermediateCertsStore;
+  private final X509CertSelector primaryCert;
 
   public CustomPkixBuilderParameters(
     HashSet<TrustAnchor> rootCertificates,
@@ -21,14 +21,14 @@ public class CustomPkixBuilderParameters extends PKIXBuilderParameters {
     LocalDateTime signValidationTime) throws Exception {
 
     super(rootCertificates, primaryCert);
-    _intermediateCertsStore = intermediateCertsStore;
-    _primaryCert = primaryCert;
+    this.intermediateCertsStore = intermediateCertsStore;
+    this.primaryCert = primaryCert;
 
     if (signValidationTime != null)
-      setDate(Utils.ConvertToDate(signValidationTime));
+      setDate(Utils.convertToDate(signValidationTime));
 
     setRevocationEnabled(false);
-    addCertStore(BcExt.ToJavaCertStore(intermediateCertsStore));
+    addCertStore(BcExt.toJavaCertStore(intermediateCertsStore));
     addCertPathChecker(new CustomPkixCertPathChecker());
     setPolicyQualifiersRejected(false);
   }
@@ -38,10 +38,10 @@ public class CustomPkixBuilderParameters extends PKIXBuilderParameters {
    *
    * @return true if CRLs successfully added, false if CRLs can not be used (and OCSP is considered)
    */
-  public boolean PrepareCrls(CrlProvider crlProvider) throws Exception {
-    List<X509CertificateHolder> certs = new ArrayList<>(_intermediateCertsStore.getMatches(null));
-    certs.add(BcExt.ToX509CertificateHolder(_primaryCert.getCertificate()));
-    certs.removeIf(cert -> BcExt.IsSelfSigned(cert));
+  public boolean prepareCrls(CrlProvider crlProvider) throws Exception {
+    List<X509CertificateHolder> certs = new ArrayList<>(intermediateCertsStore.getMatches(null));
+    certs.add(BcExt.toX509CertificateHolder(primaryCert.getCertificate()));
+    certs.removeIf(cert -> BcExt.isSelfSigned(cert));
 
     // distinctBy issuer+serialNumber
     Map<String, X509CertificateHolder> seen = new LinkedHashMap<>();
@@ -55,7 +55,7 @@ public class CustomPkixBuilderParameters extends PKIXBuilderParameters {
     if (allCrls == null) return true;
 
     CollectionStore<X509CRLHolder> crlStore = new CollectionStore<>(allCrls);
-    addCertStore(BcExt.ToJavaCrlStore(crlStore));
+    addCertStore(BcExt.toJavaCrlStore(crlStore));
     setRevocationEnabled(true);
     return false;
   }
@@ -73,7 +73,7 @@ public class CustomPkixBuilderParameters extends PKIXBuilderParameters {
 
     List<X509CRLHolder> allCrls = new ArrayList<>();
     for (X509CertificateHolder cert : allCerts) {
-      Collection<X509CRLHolder> certCrls = crlProvider.GetCrlsAsync(cert);
+      Collection<X509CRLHolder> certCrls = crlProvider.getCrlsAsync(cert);
       List<X509CRLHolder> validCrls = new ArrayList<>();
       for (X509CRLHolder crl : certCrls) {
         if (crl.getThisUpdate().before(cert.getNotAfter()))

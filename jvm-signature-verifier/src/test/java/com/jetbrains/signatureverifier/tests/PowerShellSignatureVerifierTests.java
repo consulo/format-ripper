@@ -23,8 +23,8 @@ class PowerShellSignatureVerifierTests {
   @MethodSource("VerifySignTestProvider")
   void VerifySignTest(String resourceName, VerifySignatureStatus expectedResult) throws Exception {
     VerifySignatureResult result = verifySign(resourceName);
-    if (expectedResult != result.Status()) {
-      Assertions.fail("Expected status: " + expectedResult + ", but got: " + result.Status() + ", message: " + result.Message());
+    if (expectedResult != result.getStatus()) {
+      Assertions.fail("Expected status: " + expectedResult + ", but got: " + result.getStatus() + ", message: " + result.getMessage());
     }
   }
 
@@ -32,55 +32,55 @@ class PowerShellSignatureVerifierTests {
   @MethodSource("VerifySignWithChainTestProvider")
   void VerifySignWithChainTest(String resourceName, VerifySignatureStatus expectedResult) throws Exception {
     VerifySignatureResult result = verifySignWithChain(resourceName);
-    if (expectedResult != result.Status()) {
-      Assertions.fail("Expected status: " + expectedResult + ", but got: " + result.Status() + ", message: " + result.Message());
+    if (expectedResult != result.getStatus()) {
+      Assertions.fail("Expected status: " + expectedResult + ", but got: " + result.getStatus() + ", message: " + result.getMessage());
     }
   }
 
   private VerifySignatureResult verifySign(String resourceName) throws Exception {
     try (SeekableByteChannel channel = TestUtil.getTestByteChannel("powershell", resourceName)) {
       PowerShellScriptFile psFile = new PowerShellScriptFile(channel);
-      var signatureData = psFile.GetSignatureData();
-      if (signatureData.IsEmpty()) {
+      var signatureData = psFile.getSignatureData();
+      if (signatureData.isEmpty()) {
         return new VerifySignatureResult(VerifySignatureStatus.InvalidSignature, "Cannot extract signature from file");
       }
-      SignedMessage signedMessage = SignedMessage.CreateInstance(signatureData);
-      VerifySignatureResult result = psFile.VerifyContentHash(signedMessage.SignedData, psFile);
-      if (result.NotValid()) {
+      SignedMessage signedMessage = SignedMessage.createInstance(signatureData);
+      VerifySignatureResult result = psFile.verifyContentHash(signedMessage.SignedData, psFile);
+      if (result.isNotValid()) {
         return result;
       }
       SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
-      return signedMessageVerifier.VerifySignatureAsync(signedMessage, simpleVerificationParams);
+      return signedMessageVerifier.verifySignatureAsync(signedMessage, simpleVerificationParams);
     }
   }
 
   private VerifySignatureResult verifySignWithChain(String resourceName) throws Exception {
     try (InputStream is = TestUtil.getTestDataInputStream("powershell", resourceName)) {
       PowerShellScriptFile file = new PowerShellScriptFile(is);
-      var signatureData = file.GetSignatureData();
-      if (signatureData.IsEmpty()) {
+      var signatureData = file.getSignatureData();
+      if (signatureData.isEmpty()) {
         return new VerifySignatureResult(VerifySignatureStatus.InvalidSignature, "Cannot extract signature from file");
       }
-      SignedMessage signedMessage = SignedMessage.CreateInstance(signatureData);
+      SignedMessage signedMessage = SignedMessage.createInstance(signatureData);
       SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
-      return signedMessageVerifier.VerifySignatureAsync(signedMessage, getChainVerificationParams());
+      return signedMessageVerifier.verifySignatureAsync(signedMessage, getChainVerificationParams());
     }
   }
 
-  private boolean _chainParamsComputed = false;
-  private SignatureVerificationParams _chainVerificationParams;
+  private boolean chainParamsComputed = false;
+  private SignatureVerificationParams chainVerificationParams;
 
   private SignatureVerificationParams getChainVerificationParams() throws Exception {
-    if (!_chainParamsComputed) {
+    if (!chainParamsComputed) {
       try (InputStream codesignroots = TestUtil.getTestDataInputStream("powershell", DIGICERT_ROOT_G4);
            InputStream timestamproots = TestUtil.getTestDataInputStream("powershell", DIGICERT_ROOT_G4)) {
         SignatureVerificationParams params = new SignatureVerificationParams(codesignroots, timestamproots, true, false);
         params.getRootCertificates(); // fully read streams
-        _chainVerificationParams = params;
+        chainVerificationParams = params;
       }
-      _chainParamsComputed = true;
+      chainParamsComputed = true;
     }
-    return _chainVerificationParams;
+    return chainVerificationParams;
   }
 
   private static final String DIGICERT_ROOT_G4 = "DigiCertTrustedRootG4.crt.pem";

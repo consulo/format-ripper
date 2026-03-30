@@ -10,17 +10,17 @@ import org.slf4j.LoggerFactory;
 public class SignedMessageVerifier {
   private static final Logger LOG = LoggerFactory.getLogger(SignedMessageVerifier.class);
 
-  private final CrlProvider _crlProvider;
+  private final CrlProvider crlProvider;
 
   public SignedMessageVerifier() {
     this(new CrlProvider());
   }
 
   public SignedMessageVerifier(CrlProvider crlProvider) {
-    _crlProvider = crlProvider;
+    this.crlProvider = crlProvider;
   }
 
-  public VerifySignatureResult VerifySignatureAsync(
+  public VerifySignatureResult verifySignatureAsync(
     SignedMessage signedMessage,
     SignatureVerificationParams signatureVerificationParams) throws Exception {
 
@@ -36,8 +36,8 @@ public class SignedMessageVerifier {
     SignatureVerificationParams signatureVerificationParams) throws Exception {
 
     for (SignerInformation signer : signersStore.getSigners()) {
-      SignerInfoVerifier siv = new SignerInfoVerifier(signer, certs, _crlProvider);
-      VerifySignatureResult result = siv.VerifyAsync(signatureVerificationParams);
+      SignerInfoVerifier siv = new SignerInfoVerifier(signer, certs, crlProvider);
+      VerifySignatureResult result = siv.verifyAsync(signatureVerificationParams);
       if (result != VerifySignatureResult.Valid)
         return result;
     }

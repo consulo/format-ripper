@@ -14,17 +14,17 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class CrlCacheFileSystem {
-  private final Path _cacheDir;
+  private final Path cacheDir;
 
   public CrlCacheFileSystem() {
     this("crlscache");
   }
 
   public CrlCacheFileSystem(String cacheDir) {
-    _cacheDir = Paths.get(System.getProperty("java.io.tmpdir"), cacheDir);
+    this.cacheDir = Paths.get(System.getProperty("java.io.tmpdir"), cacheDir);
   }
 
-  public Collection<X509CRLHolder> GetCrls(String issuerId) throws Exception {
+  public Collection<X509CRLHolder> getCrls(String issuerId) throws Exception {
     List<Path> crlFiles = getCrlFiles(issuerId);
     List<X509CRLHolder> res = new ArrayList<>();
     for (Path path : crlFiles) {
@@ -35,14 +35,14 @@ public class CrlCacheFileSystem {
     return res;
   }
 
-  public void UpdateCrls(String issuerId, List<byte[]> crlsData) throws Exception {
+  public void updateCrls(String issuerId, List<byte[]> crlsData) throws Exception {
     cleanUpCrls(issuerId);
     saveCrls(issuerId, crlsData);
   }
 
   private List<Path> getCrlFiles(String issuerId) throws IOException {
     ensureCacheDirectory();
-    return Files.find(_cacheDir, 1, (path, attrs) -> isMatchingCrl(path, issuerId))
+    return Files.find(cacheDir, 1, (path, attrs) -> isMatchingCrl(path, issuerId))
       .collect(Collectors.toList());
   }
 
@@ -52,8 +52,8 @@ public class CrlCacheFileSystem {
   }
 
   private void ensureCacheDirectory() throws IOException {
-    if (!Files.exists(_cacheDir))
-      Files.createDirectory(_cacheDir);
+    if (!Files.exists(cacheDir))
+      Files.createDirectory(cacheDir);
   }
 
   private void cleanUpCrls(String issuerId) throws Exception {
@@ -73,7 +73,7 @@ public class CrlCacheFileSystem {
   }
 
   private void saveCrl(String crlFileName, byte[] crlData) throws IOException {
-    Path crlFilePath = _cacheDir.resolve(crlFileName);
+    Path crlFilePath = cacheDir.resolve(crlFileName);
     Files.write(crlFilePath, crlData);
   }
 }

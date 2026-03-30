@@ -14,66 +14,66 @@ import java.util.List;
 public class CompoundFile {
   private static final int DIRECTORY_ENTRY_SIZE = 0x80;
 
-  private final SeekableByteChannel _stream;
-  private final CompoundFileHeader _header;
-  private final List<Integer> _sectFat;
-  private final List<Integer> _fat;
-  private final List<Integer> _miniFat;
+  private final SeekableByteChannel stream;
+  private final CompoundFileHeader header;
+  private final List<Integer> sectFat;
+  private final List<Integer> fat;
+  private final List<Integer> miniFat;
 
   public CompoundFile(SeekableByteChannel stream) throws IOException {
-    _stream = stream;
+    this.stream = stream;
     BinaryReader reader = new BinaryReader(ReadUtils.rewind(stream));
-    _header = new CompoundFileHeader(_stream, reader);
-    _sectFat = readSectFat(reader);
-    _fat = readFat(reader);
-    _miniFat = readMiniFat(reader);
+    header = new CompoundFileHeader(stream, reader);
+    sectFat = readSectFat(reader);
+    fat = readFat(reader);
+    miniFat = readMiniFat(reader);
   }
 
-  public byte[] GetStreamData(byte[] entryName) throws IOException {
-    BinaryReader reader = new BinaryReader(_stream);
+  public byte[] getStreamData(byte[] entryName) throws IOException {
+    BinaryReader reader = new BinaryReader(stream);
     DirectoryEntry dirEntry = findStreamByName(reader, entryName);
     if (dirEntry != null)
       return readStreamData(reader, dirEntry);
     return null;
   }
 
-  public byte[] GetStreamData(DirectoryEntry entry) throws IOException {
-    BinaryReader reader = new BinaryReader(_stream);
+  public byte[] getStreamData(DirectoryEntry entry) throws IOException {
+    BinaryReader reader = new BinaryReader(stream);
     return readStreamData(reader, entry);
   }
 
-  public List<DirectoryEntry> GetStreamDirectoryEntries() throws IOException {
-    BinaryReader reader = new BinaryReader(_stream);
+  public List<DirectoryEntry> getStreamDirectoryEntries() throws IOException {
+    BinaryReader reader = new BinaryReader(stream);
     List<DirectoryEntry> res = new ArrayList<>();
-    int nextSect = _header.SectDirStart;
+    int nextSect = header.sectDirStart;
 
     while (Integer.toUnsignedLong(nextSect) != SpecialSectors.ENDOFCHAIN) {
-      ReadUtils.jump(_stream, _header.GetSectorOffset(nextSect));
+      ReadUtils.jump(stream, header.getSectorOffset(nextSect));
 
-      int count = _header.getSectorSize() / DIRECTORY_ENTRY_SIZE;
+      int count = header.getSectorSize() / DIRECTORY_ENTRY_SIZE;
       for (int dirIndex = 0; dirIndex < count; dirIndex++) {
         DirectoryEntry dirEntry = readDirectoryEntry(reader);
-        if (dirEntry.EntryType == DirectoryEntryType.STGTY_STREAM)
+        if (dirEntry.entryType == DirectoryEntryType.STGTY_STREAM)
           res.add(dirEntry);
       }
-      nextSect = _fat.get(nextSect);
+      nextSect = fat.get(nextSect);
     }
     return res;
   }
 
-  public byte[] GetRootDirectoryClsid() throws IOException {
-    BinaryReader reader = new BinaryReader(_stream);
+  public byte[] getRootDirectoryClsid() throws IOException {
+    BinaryReader reader = new BinaryReader(stream);
     DirectoryEntry root = findRootDirectoryEntry(reader);
-    return root != null ? root.Clsid : null;
+    return root != null ? root.clsid : null;
   }
 
   private List<Integer> readFat(BinaryReader reader) throws IOException {
     List<Integer> res = new ArrayList<>();
-    for (int sect : _sectFat) {
-      ReadUtils.jump(_stream, _header.GetSectorOffset(sect));
-      int count = _header.getSectorSize() >> 2;
+    for (int sect : sectFat) {
+      ReadUtils.jump(stream, header.getSectorOffset(sect));
+      int count = header.getSectorSize() >> 2;
       for (int j = 0; j < count; j++) {
-        res.add(reader.ReadUInt32());
+        res.add(reader.readUInt32());
       }
     }
     return res;
@@ -83,20 +83,20 @@ public class CompoundFile {
     List<Integer> res = new ArrayList<>();
 
     for (int i = 0; i < 109; i++) {
-      int sector = reader.ReadUInt32();
+      int sector = reader.readUInt32();
       if (Integer.toUnsignedLong(sector) == SpecialSectors.FREESECT)
         break;
       res.add(sector);
     }
 
-    int nextSect = _header.SectDifStart;
-    int difatSectorsCount = (_header.getSectorSize() >> 2) - 1;
+    int nextSect = header.sectDifStart;
+    int difatSectorsCount = (header.getSectorSize() >> 2) - 1;
 
     while (Integer.toUnsignedLong(nextSect) != SpecialSectors.ENDOFCHAIN) {
-      ReadUtils.jump(_stream, _header.GetSectorOffset(nextSect));
+      ReadUtils.jump(stream, header.getSectorOffset(nextSect));
 
       for (int i = 0; i < difatSectorsCount; i++) {
-        int sector = reader.ReadUInt32();
+        int sector = reader.readUInt32();
         long sectorUnsigned = Integer.toUnsignedLong(sector);
         if (sectorUnsigned == SpecialSectors.FREESECT || sectorUnsigned == SpecialSectors.ENDOFCHAIN) {
           return res;
@@ -104,55 +104,55 @@ public class CompoundFile {
         res.add(sector);
       }
       // next sector in the difat chain
-      nextSect = reader.ReadUInt32();
+      nextSect = reader.readUInt32();
     }
     return res;
   }
 
   private DirectoryEntry findRootDirectoryEntry(BinaryReader reader) throws IOException {
-    if (Integer.toUnsignedLong(_header.SectDirStart) != SpecialSectors.ENDOFCHAIN) {
-      ReadUtils.jump(_stream, _header.GetSectorOffset(_header.SectDirStart));
+    if (Integer.toUnsignedLong(header.sectDirStart) != SpecialSectors.ENDOFCHAIN) {
+      ReadUtils.jump(stream, header.getSectorOffset(header.sectDirStart));
       return readDirectoryEntry(reader);
     }
     return null;
   }
 
   private DirectoryEntry findStreamByName(BinaryReader reader, byte[] streamName) throws IOException {
-    int nextSect = _header.SectDirStart;
+    int nextSect = header.sectDirStart;
 
     while (Integer.toUnsignedLong(nextSect) != SpecialSectors.ENDOFCHAIN) {
-      ReadUtils.jump(_stream, _header.GetSectorOffset(nextSect));
+      ReadUtils.jump(stream, header.getSectorOffset(nextSect));
 
-      int count = _header.getSectorSize() / DIRECTORY_ENTRY_SIZE;
+      int count = header.getSectorSize() / DIRECTORY_ENTRY_SIZE;
       for (int dirIndex = 0; dirIndex < count; dirIndex++) {
         DirectoryEntry dirEntry = readDirectoryEntry(reader);
-        if (Arrays.equals(streamName, dirEntry.Name) && dirEntry.EntryType == DirectoryEntryType.STGTY_STREAM)
+        if (Arrays.equals(streamName, dirEntry.name) && dirEntry.entryType == DirectoryEntryType.STGTY_STREAM)
           return dirEntry;
       }
-      nextSect = _fat.get(nextSect);
+      nextSect = fat.get(nextSect);
     }
     return null;
   }
 
   private byte[] readStreamData(BinaryReader reader, DirectoryEntry dirEntry) throws IOException {
-    if (Integer.toUnsignedLong(dirEntry.SizeLow) <= Integer.toUnsignedLong(_header.MiniSectorCutoff)) {
+    if (Integer.toUnsignedLong(dirEntry.sizeLow) <= Integer.toUnsignedLong(header.miniSectorCutoff)) {
       DirectoryEntry rootDirectoryEntry = findRootDirectoryEntry(reader);
 
-      if (rootDirectoryEntry == null || rootDirectoryEntry.EntryType != DirectoryEntryType.STGTY_ROOT)
+      if (rootDirectoryEntry == null || rootDirectoryEntry.entryType != DirectoryEntryType.STGTY_ROOT)
         throw new InvalidDataException("Invalid format. Root directory entry not found");
 
-      int miniStreamStartSector = rootDirectoryEntry.StartSect;
-      long miniStreamSectorOffset = _header.GetSectorOffset(miniStreamStartSector);
+      int miniStreamStartSector = rootDirectoryEntry.startSect;
+      long miniStreamSectorOffset = header.getSectorOffset(miniStreamStartSector);
       return readStreamData(
         reader,
-        _miniFat,
-        dirEntry.SizeLow,
-        dirEntry.StartSect,
-        _header.getMiniSectorSize(),
+        miniFat,
+        dirEntry.sizeLow,
+        dirEntry.startSect,
+        header.getMiniSectorSize(),
         (int) miniStreamSectorOffset
       );
     }
-    return readStreamData(reader, _fat, dirEntry.SizeLow, dirEntry.StartSect, _header.getSectorSize(), 0);
+    return readStreamData(reader, fat, dirEntry.sizeLow, dirEntry.startSect, header.getSectorSize(), 0);
   }
 
   private byte[] readStreamData(
@@ -170,15 +170,15 @@ public class CompoundFile {
     while (Integer.toUnsignedLong(nextSect) != SpecialSectors.ENDOFCHAIN) {
       long streamOffset;
 
-      if (sectorSize == _header.getMiniSectorSize()) {
-        streamOffset = Integer.toUnsignedLong(baseOffset) + (Integer.toUnsignedLong(nextSect) << _header.MiniSectorShift);
+      if (sectorSize == header.getMiniSectorSize()) {
+        streamOffset = Integer.toUnsignedLong(baseOffset) + (Integer.toUnsignedLong(nextSect) << header.miniSectorShift);
       } else {
-        streamOffset = _header.GetSectorOffset(nextSect);
+        streamOffset = header.getSectorOffset(nextSect);
       }
 
-      ReadUtils.jump(_stream, streamOffset);
+      ReadUtils.jump(stream, streamOffset);
       int toRead = Math.min(size - read, sectorSize);
-      byte[] data = reader.ReadBytes(toRead);
+      byte[] data = reader.readBytes(toRead);
       System.arraycopy(data, 0, res, read, data.length);
       read += data.length;
       nextSect = fat.get(nextSect);
@@ -188,22 +188,22 @@ public class CompoundFile {
 
   private List<Integer> readMiniFat(BinaryReader reader) throws IOException {
     List<Integer> miniFat = new ArrayList<>();
-    int nextSect = _header.SectMiniFatStart;
+    int nextSect = header.sectMiniFatStart;
 
     while (Integer.toUnsignedLong(nextSect) != SpecialSectors.ENDOFCHAIN) {
-      ReadUtils.jump(_stream, _header.GetSectorOffset(nextSect));
+      ReadUtils.jump(stream, header.getSectorOffset(nextSect));
 
-      int count = _header.getSectorSize() >> 2;
+      int count = header.getSectorSize() >> 2;
       for (int j = 0; j < count; j++) {
-        miniFat.add(reader.ReadUInt32());
+        miniFat.add(reader.readUInt32());
       }
 
-      nextSect = _fat.get(nextSect);
+      nextSect = fat.get(nextSect);
     }
     return miniFat;
   }
 
   private DirectoryEntry readDirectoryEntry(BinaryReader reader) throws IOException {
-    return new DirectoryEntry(_stream, reader);
+    return new DirectoryEntry(stream, reader);
   }
 }

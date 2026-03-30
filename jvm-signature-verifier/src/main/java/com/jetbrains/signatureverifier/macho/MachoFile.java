@@ -16,14 +16,14 @@ import java.util.Collections;
 import java.util.List;
 
 public class MachoFile {
-  private final SeekableByteChannel _stream;
-  private long Magic = 0;
-  public long Magic() { return Magic; }
+  private final SeekableByteChannel stream;
+  private long magic = 0;
+  public long magic() { return magic; }
 
-  public boolean isLe32() { return Magic == MachoConsts.MH_MAGIC; }
-  public boolean isLe64() { return Magic == MachoConsts.MH_MAGIC_64; }
-  public boolean isBe32() { return Magic == MachoConsts.MH_CIGAM; }
-  public boolean isBe64() { return Magic == MachoConsts.MH_CIGAM_64; }
+  public boolean isLe32() { return magic == MachoConsts.MH_MAGIC; }
+  public boolean isLe64() { return magic == MachoConsts.MH_MAGIC_64; }
+  public boolean isBe32() { return magic == MachoConsts.MH_CIGAM; }
+  public boolean isBe64() { return magic == MachoConsts.MH_CIGAM_64; }
   public boolean is32() { return isLe32() || isBe32(); }
   public boolean isBe() { return isBe32() || isBe64(); }
 
@@ -39,22 +39,22 @@ public class MachoFile {
    * @throws InvalidDataException If the input stream does not contain MachO
    */
   public MachoFile(SeekableByteChannel stream) {
-    _stream = stream;
+    this.stream = stream;
     setMagic();
   }
 
   private void setMagic() {
     try {
-      BinaryReader reader = new BinaryReader(ReadUtils.rewind(_stream));
-      Magic = Integer.toUnsignedLong(reader.ReadUInt32()); // mach_header::magic / mach_header64::magic
+      BinaryReader reader = new BinaryReader(ReadUtils.rewind(stream));
+      magic = Integer.toUnsignedLong(reader.readUInt32()); // mach_header::magic / mach_header64::magic
 
-      if (!MachoUtils.IsMacho(Magic))
+      if (!MachoUtils.isMacho(magic))
         throw new InvalidDataException("Unknown format");
 
-      ReadUtils.seek(_stream, (long) ncmdsOffset.Offset(), SeekOrigin.Begin);
-      ncmds = Integer.toUnsignedLong(reader.ReadUInt32Le(isBe())); // mach_header::ncmds / mach_header_64::ncmds
-      sizeofcmds = Integer.toUnsignedLong(reader.ReadUInt32Le(isBe())); // mach_header::sizeofcmds / mach_header_64::sizeofcmds
-      firstLoadCommandPosition = _stream.position() + (is32() ? 4 : 8); // load_command[0]
+      ReadUtils.seek(stream, (long) ncmdsOffset.getOffset(), SeekOrigin.Begin);
+      ncmds = Integer.toUnsignedLong(reader.readUInt32Le(isBe())); // mach_header::ncmds / mach_header_64::ncmds
+      sizeofcmds = Integer.toUnsignedLong(reader.readUInt32Le(isBe())); // mach_header::sizeofcmds / mach_header_64::sizeofcmds
+      firstLoadCommandPosition = stream.position() + (is32() ? 4 : 8); // load_command[0]
     } catch (IOException e) {
       throw new InvalidDataException("Unknown format");
     }
@@ -68,22 +68,22 @@ public class MachoFile {
     byte[] buffer = new byte[1024 * 1024];
 
     if (!excludeRanges.isEmpty()) {
-      ReadUtils.rewind(_stream);
+      ReadUtils.rewind(stream);
       for (DataInfo dataInfo : excludeRanges) {
-        long size = (long) dataInfo.Offset() - _stream.position();
+        long size = (long) dataInfo.getOffset() - stream.position();
         if (size > 0) {
-          readAndHash(_stream, hash, buffer, size);
+          readAndHash(stream, hash, buffer, size);
         }
         // Skip excluded range
-        ReadUtils.seek(_stream, (long) dataInfo.Size(), SeekOrigin.Current);
+        ReadUtils.seek(stream, (long) dataInfo.getSize(), SeekOrigin.Current);
       }
 
       // Hash the rest to the end
-      readToEndAndHash(_stream, hash, buffer);
+      readToEndAndHash(stream, hash, buffer);
 
       // append zero-inset to the end of data
       if (!hasLcCodeSignature) {
-        long filesize = _stream.position();
+        long filesize = stream.position();
         long zeroInsetSize = filesize % 16;
         if (zeroInsetSize > 0) {
           zeroInsetSize = 16 - zeroInsetSize;
@@ -91,8 +91,8 @@ public class MachoFile {
         }
       }
     } else {
-      ReadUtils.rewind(_stream);
-      readToEndAndHash(_stream, hash, buffer);
+      ReadUtils.rewind(stream);
+      readToEndAndHash(stream, hash, buffer);
     }
     return hash.digest();
   }
@@ -120,43 +120,43 @@ public class MachoFile {
 
   private java.util.AbstractMap.SimpleImmutableEntry<List<DataInfo>, Boolean> getHashExcludeRanges() throws IOException {
     List<DataInfo> excludeRanges = new ArrayList<>(Collections.singletonList(ncmdsOffset));
-    BinaryReader reader = new BinaryReader(_stream);
-    ReadUtils.seek(_stream, firstLoadCommandPosition, SeekOrigin.Begin); // load_command[0]
+    BinaryReader reader = new BinaryReader(stream);
+    ReadUtils.seek(stream, firstLoadCommandPosition, SeekOrigin.Begin); // load_command[0]
 
     boolean hasLcCodeSignature = false;
     long _ncmds = ncmds;
     while (_ncmds-- > 0) {
-      long cmpPosition = _stream.position();
-      int cmd = reader.ReadUInt32Le(isBe32() || isBe64());     // load_command::cmd
-      int cmdsize = reader.ReadUInt32Le(isBe32() || isBe64()); // load_command::cmdsize
+      long cmpPosition = stream.position();
+      int cmd = reader.readUInt32Le(isBe32() || isBe64());     // load_command::cmd
+      int cmdsize = reader.readUInt32Le(isBe32() || isBe64()); // load_command::cmdsize
 
       if (cmd == MachoConsts.LC_SEGMENT || cmd == MachoConsts.LC_SEGMENT_64) {
-        String segname = reader.ReadString(10);
+        String segname = reader.readString(10);
         if ("__LINKEDIT".equals(segname)) {
-          ReadUtils.seek(_stream, 6, SeekOrigin.Current); // skip to end of segname (16 bytes total)
-          ReadUtils.seek(_stream, is32() ? 4 : 8, SeekOrigin.Current); // skip vmaddr
+          ReadUtils.seek(stream, 6, SeekOrigin.Current); // skip to end of segname (16 bytes total)
+          ReadUtils.seek(stream, is32() ? 4 : 8, SeekOrigin.Current); // skip vmaddr
 
-          DataInfo vmsizeOffset = new DataInfo((int) _stream.position(), is32() ? 4 : 8);
+          DataInfo vmsizeOffset = new DataInfo((int) stream.position(), is32() ? 4 : 8);
           excludeRanges.add(vmsizeOffset);
 
-          ReadUtils.seek(_stream, (long) (is32() ? 4 : 8) * 2, SeekOrigin.Current); // skip vmsize and fileoff
+          ReadUtils.seek(stream, (long) (is32() ? 4 : 8) * 2, SeekOrigin.Current); // skip vmsize and fileoff
 
-          DataInfo filesizeOffset = new DataInfo((int) _stream.position(), is32() ? 4 : 8);
+          DataInfo filesizeOffset = new DataInfo((int) stream.position(), is32() ? 4 : 8);
           excludeRanges.add(filesizeOffset);
         }
       } else if (cmd == MachoConsts.LC_CODE_SIGNATURE) {
         DataInfo lcCodeSignatureOffset = new DataInfo((int) cmpPosition, cmdsize);
         excludeRanges.add(lcCodeSignatureOffset);
         DataInfo lcCodeSignatureDataOffset = new DataInfo(
-          reader.ReadUInt32Le(isBe()),  // load_command::dataoff
-          reader.ReadUInt32Le(isBe())   // load_command::datasize
+          reader.readUInt32Le(isBe()),  // load_command::dataoff
+          reader.readUInt32Le(isBe())   // load_command::datasize
         );
         excludeRanges.add(lcCodeSignatureDataOffset);
         hasLcCodeSignature = true;
       }
 
-      long remaining = Integer.toUnsignedLong(cmdsize) - (_stream.position() - cmpPosition);
-      ReadUtils.seek(_stream, remaining, SeekOrigin.Current);
+      long remaining = Integer.toUnsignedLong(cmdsize) - (stream.position() - cmpPosition);
+      ReadUtils.seek(stream, remaining, SeekOrigin.Current);
     }
 
     if (!hasLcCodeSignature) {
@@ -171,7 +171,7 @@ public class MachoFile {
    *
    * @throws InvalidDataException If the input stream does not correspond to MachO format or signature data is malformed
    */
-  public SignatureData GetSignatureData() {
+  public SignatureData getSignatureData() {
     try {
       return getMachoSignatureData();
     } catch (IOException ex) {
@@ -183,40 +183,40 @@ public class MachoFile {
     // Note: See https://opensource.apple.com/source/xnu/xnu-2050.18.24/EXTERNAL_HEADERS/mach-o/loader.h
     byte[] signedData = null;
     byte[] cmsData = null;
-    BinaryReader reader = new BinaryReader(_stream);
-    ReadUtils.seek(_stream, firstLoadCommandPosition, SeekOrigin.Begin); // load_command[0]
+    BinaryReader reader = new BinaryReader(stream);
+    ReadUtils.seek(stream, firstLoadCommandPosition, SeekOrigin.Begin); // load_command[0]
 
     long _ncmds = ncmds;
     while (_ncmds-- > 0) {
-      int cmd = reader.ReadUInt32Le(isBe32() || isBe64());     // load_command::cmd
-      int cmdsize = reader.ReadUInt32Le(isBe32() || isBe64()); // load_command::cmdsize
+      int cmd = reader.readUInt32Le(isBe32() || isBe64());     // load_command::cmd
+      int cmdsize = reader.readUInt32Le(isBe32() || isBe64()); // load_command::cmdsize
 
       if (cmd == MachoConsts.LC_CODE_SIGNATURE) {
-        int dataoff = reader.ReadUInt32Le(isBe32() || isBe64()); // load_command::dataoff
-        ReadUtils.seek(_stream, Integer.toUnsignedLong(dataoff), SeekOrigin.Begin);
-        long CS_SuperBlob_start = _stream.position();
-        ReadUtils.seek(_stream, 8, SeekOrigin.Current);
-        int CS_SuperBlob_count = reader.ReadUInt32Le(true);
+        int dataoff = reader.readUInt32Le(isBe32() || isBe64()); // load_command::dataoff
+        ReadUtils.seek(stream, Integer.toUnsignedLong(dataoff), SeekOrigin.Begin);
+        long CS_SuperBlob_start = stream.position();
+        ReadUtils.seek(stream, 8, SeekOrigin.Current);
+        int CS_SuperBlob_count = reader.readUInt32Le(true);
 
         while (CS_SuperBlob_count-- > 0) {
-          int CS_BlobIndex_type = reader.ReadUInt32Le(true);
-          int CS_BlobIndex_offset = reader.ReadUInt32Le(true);
-          long position = _stream.position();
+          int CS_BlobIndex_type = reader.readUInt32Le(true);
+          int CS_BlobIndex_offset = reader.readUInt32Le(true);
+          long position = stream.position();
 
           if (CS_BlobIndex_type == MachoConsts.CSSLOT_CODEDIRECTORY) {
-            ReadUtils.seek(_stream, CS_SuperBlob_start, SeekOrigin.Begin);
-            ReadUtils.seek(_stream, Integer.toUnsignedLong(CS_BlobIndex_offset), SeekOrigin.Current);
+            ReadUtils.seek(stream, CS_SuperBlob_start, SeekOrigin.Begin);
+            ReadUtils.seek(stream, Integer.toUnsignedLong(CS_BlobIndex_offset), SeekOrigin.Current);
             signedData = MachoUtils.ReadCodeDirectoryBlob(reader);
-            ReadUtils.seek(_stream, position, SeekOrigin.Begin);
+            ReadUtils.seek(stream, position, SeekOrigin.Begin);
           } else if (CS_BlobIndex_type == MachoConsts.CSSLOT_CMS_SIGNATURE) {
-            ReadUtils.seek(_stream, CS_SuperBlob_start, SeekOrigin.Begin);
-            ReadUtils.seek(_stream, Integer.toUnsignedLong(CS_BlobIndex_offset), SeekOrigin.Current);
+            ReadUtils.seek(stream, CS_SuperBlob_start, SeekOrigin.Begin);
+            ReadUtils.seek(stream, Integer.toUnsignedLong(CS_BlobIndex_offset), SeekOrigin.Current);
             cmsData = MachoUtils.ReadBlob(reader);
-            ReadUtils.seek(_stream, position, SeekOrigin.Begin);
+            ReadUtils.seek(stream, position, SeekOrigin.Begin);
           }
         }
       }
-      ReadUtils.seek(_stream, Integer.toUnsignedLong(cmdsize) - 8L, SeekOrigin.Current);
+      ReadUtils.seek(stream, Integer.toUnsignedLong(cmdsize) - 8L, SeekOrigin.Current);
     }
     return new SignatureData(signedData, cmsData);
   }

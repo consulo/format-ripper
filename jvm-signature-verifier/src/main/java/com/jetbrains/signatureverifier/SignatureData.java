@@ -19,11 +19,11 @@ public class SignatureData {
     return cmsData;
   }
 
-  public boolean IsEmpty() {
+  public boolean isEmpty() {
     return cmsData == null;
   }
 
-  public boolean HasAttachedSignedData() {
+  public boolean hasAttachedSignedData() {
     return signedData != null;
   }
 }

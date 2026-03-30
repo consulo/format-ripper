@@ -27,20 +27,7 @@ public class VerifySignatureResult {
     return status != VerifySignatureStatus.Valid;
   }
 
-  // Keep Kotlin-style accessors
-  public VerifySignatureStatus Status() {
-    return status;
-  }
-
-  public String Message() {
-    return message;
-  }
-
-  public boolean NotValid() {
-    return isNotValid();
-  }
-
-  public static VerifySignatureResult InvalidChain(String message) {
+  public static VerifySignatureResult invalidChain(String message) {
     return new VerifySignatureResult(VerifySignatureStatus.InvalidChain, message);
   }
 }

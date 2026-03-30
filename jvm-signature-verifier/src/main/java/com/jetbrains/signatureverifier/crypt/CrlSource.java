@@ -11,7 +11,7 @@ import java.net.http.HttpResponse;
 public class CrlSource {
   private static final Logger LOG = LoggerFactory.getLogger(CrlSource.class);
 
-  public byte[] GetCrlAsync(String url) throws Exception {
+  public byte[] getCrlAsync(String url) throws Exception {
     try {
       HttpClient httpClient = HttpClient.newHttpClient();
       HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url)).GET().build();

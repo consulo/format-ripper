@@ -14,7 +14,7 @@ import java.util.List;
  * MS Windows Installer compound file
  */
 public class MsiFile {
-  private final CompoundFile _cf;
+  private final CompoundFile cf;
 
   // \u0005DigitalSignature
   private static final byte[] DIGITAL_SIGNATURE_ENTRY_NAME = {
@@ -36,14 +36,14 @@ public class MsiFile {
    * @throws InvalidDataException If the input stream contains a compound file with wrong structure
    */
   public MsiFile(SeekableByteChannel stream) throws IOException {
-    _cf = new CompoundFile(stream);
+    cf = new CompoundFile(stream);
   }
 
   /**
    * Retrieve the signature data from MSI
    */
-  public SignatureData GetSignatureData() throws IOException {
-    byte[] data = _cf.GetStreamData(DIGITAL_SIGNATURE_ENTRY_NAME);
+  public SignatureData getSignatureData() throws IOException {
+    byte[] data = cf.getStreamData(DIGITAL_SIGNATURE_ENTRY_NAME);
     if (data == null)
       return SignatureData.Empty;
     return new SignatureData(null, data);
@@ -56,23 +56,23 @@ public class MsiFile {
    * @param skipMsiDigitalSignatureExEntry Skip \u0005MsiDigitalSignatureEx entry data when hashing
    */
   public byte[] ComputeHash(String algName, boolean skipMsiDigitalSignatureExEntry) throws IOException, NoSuchAlgorithmException {
-    List<DirectoryEntry> entries = _cf.GetStreamDirectoryEntries();
+    List<DirectoryEntry> entries = cf.getStreamDirectoryEntries();
     entries.sort(this::compareDirectoryEntries);
 
     MessageDigest hash = MessageDigest.getInstance(algName);
 
     for (DirectoryEntry entry : entries) {
-      if (Arrays.equals(entry.Name, DIGITAL_SIGNATURE_ENTRY_NAME))
+      if (Arrays.equals(entry.name, DIGITAL_SIGNATURE_ENTRY_NAME))
         continue;
 
-      if (skipMsiDigitalSignatureExEntry && Arrays.equals(entry.Name, MSI_DIGITAL_SIGNATURE_EX_ENTRY_NAME))
+      if (skipMsiDigitalSignatureExEntry && Arrays.equals(entry.name, MSI_DIGITAL_SIGNATURE_EX_ENTRY_NAME))
         continue;
 
-      byte[] data = _cf.GetStreamData(entry);
+      byte[] data = cf.getStreamData(entry);
       hash.update(data);
     }
 
-    byte[] rootClsid = _cf.GetRootDirectoryClsid();
+    byte[] rootClsid = cf.getRootDirectoryClsid();
     if (rootClsid != null)
       hash.update(rootClsid);
 
@@ -80,8 +80,8 @@ public class MsiFile {
   }
 
   private int compareDirectoryEntries(DirectoryEntry e1, DirectoryEntry e2) {
-    byte[] a = e1.Name;
-    byte[] b = e2.Name;
+    byte[] a = e1.name;
+    byte[] b = e2.name;
     int size = Math.min(a.length, b.length);
 
     for (int i = 0; i < size; i++)

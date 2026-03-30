@@ -20,12 +20,12 @@ class MachoComputeHashTest {
   @MethodSource("MachoComputeHashTestProvider")
   void ComputeHashTest(String machoResourceName, String alg, List<String> expectedResult) throws Exception {
     try (var channel = Files.newByteChannel(TestUtil.getTestDataFile("mach-o", machoResourceName), StandardOpenOption.READ)) {
-      Collection<MachoFile> machoFiles = new MachoArch(channel).Extract();
+      Collection<MachoFile> machoFiles = new MachoArch(channel).extract();
       MachoFile[] filesArray = machoFiles.toArray(new MachoFile[0]);
 
       for (int index = 0; index < filesArray.length; index++) {
         byte[] result = filesArray[index].ComputeHash(alg);
-        Assertions.assertEquals(expectedResult.get(index), BcExt.ConvertToHexString(result).toUpperCase());
+        Assertions.assertEquals(expectedResult.get(index), BcExt.convertToHexString(result).toUpperCase());
       }
     }
   }

@@ -19,52 +19,52 @@ public final class FileTypeDetector {
   private FileTypeDetector() {
   }
 
-  public static AbstractMap.SimpleImmutableEntry<FileType, EnumSet<FileProperties>> DetectFileType(SeekableByteChannel stream) {
-    EnumSet<FileProperties> res = IsPe(stream);
+  public static AbstractMap.SimpleImmutableEntry<FileType, EnumSet<FileProperties>> detectFileType(SeekableByteChannel stream) {
+    EnumSet<FileProperties> res = isPe(stream);
     if (res != null)
       return pair(FileType.Pe, res);
 
-    res = IsMsi(stream);
+    res = isMsi(stream);
     if (res != null)
       return pair(FileType.Msi, res);
 
-    AbstractMap.SimpleImmutableEntry<EnumSet<FileProperties>, List<ProcessorArchitecture>> machoResult = TryParseMachO(stream);
+    AbstractMap.SimpleImmutableEntry<EnumSet<FileProperties>, List<ProcessorArchitecture>> machoResult = tryParseMachO(stream);
     if (machoResult != null)
       return pair(FileType.MachO, machoResult.getKey());
 
-    res = IsElf(stream);
+    res = isElf(stream);
     if (res != null)
       return pair(FileType.Elf, res);
 
-    res = IsShebangScript(stream);
+    res = isShebangScript(stream);
     if (res != null)
       return pair(FileType.ShebangScript, res);
 
     return pair(FileType.Unknown, enumSetOf(FileProperties.UnknownType));
   }
 
-  private static @Nullable EnumSet<FileProperties> IsPe(SeekableByteChannel stream) {
+  private static @Nullable EnumSet<FileProperties> isPe(SeekableByteChannel stream) {
     try {
       BinaryReader reader = new BinaryReader(ReadUtils.rewind(stream));
 
-      if ((reader.ReadUInt16() & 0xFFFF) != 0x5A4D) // IMAGE_DOS_SIGNATURE
+      if ((reader.readUInt16() & 0xFFFF) != 0x5A4D) // IMAGE_DOS_SIGNATURE
         return null;
 
       ReadUtils.seek(stream, 0x3C, SeekOrigin.Begin); // IMAGE_DOS_HEADER::e_lfanew
-      ReadUtils.seek(stream, Integer.toUnsignedLong(reader.ReadUInt32()), SeekOrigin.Begin);
-      if (reader.ReadUInt32() != 0x00004550) // IMAGE_NT_SIGNATURE
+      ReadUtils.seek(stream, Integer.toUnsignedLong(reader.readUInt32()), SeekOrigin.Begin);
+      if (reader.readUInt32() != 0x00004550) // IMAGE_NT_SIGNATURE
         return null;
       ReadUtils.seek(stream, 0x12, SeekOrigin.Current); // IMAGE_FILE_HEADER::Characteristics
 
       EnumSet<FileProperties> fileProperties = enumSetOf(
-        switch (reader.ReadUInt16() & 0x2002) {
+        switch (reader.readUInt16() & 0x2002) {
           case 0x2002 -> FileProperties.SharedLibraryType; // IMAGE_FILE_EXECUTABLE_IMAGE | IMAGE_FILE_DLL
           case 0x0002 -> FileProperties.ExecutableType;    // IMAGE_FILE_EXECUTABLE_IMAGE
           default -> FileProperties.UnknownType;
         }
       );
 
-      int magic = reader.ReadUInt16() & 0xFFFF; // IMAGE_OPTIONAL_HEADER32::Magic / IMAGE_OPTIONAL_HEADER64::Magic
+      int magic = reader.readUInt16() & 0xFFFF; // IMAGE_OPTIONAL_HEADER32::Magic / IMAGE_OPTIONAL_HEADER64::Magic
       if (magic == 0x10b) {
         ReadUtils.seek(stream, 0x60L - 2, SeekOrigin.Current); // Skip IMAGE_OPTIONAL_HEADER32 to DataDirectory
       } else if (magic == 0x20b) {
@@ -72,15 +72,15 @@ public final class FileTypeDetector {
       }
 
       ReadUtils.seek(stream, 8L * 4L, SeekOrigin.Current); // DataDirectory + IMAGE_DIRECTORY_ENTRY_SECURITY
-      int securityRva = reader.ReadUInt32();
-      int securitySize = reader.ReadUInt32();
+      int securityRva = reader.readUInt32();
+      int securitySize = reader.readUInt32();
 
       if (securityRva != 0 && securitySize != 0)
         fileProperties.add(FileProperties.Signed);
 
       ReadUtils.seek(stream, 8L * 9L, SeekOrigin.Current); // DataDirectory + IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR
-      int comRva = reader.ReadUInt32();
-      int comSize = reader.ReadUInt32();
+      int comRva = reader.readUInt32();
+      int comSize = reader.readUInt32();
 
       if (comRva != 0 && comSize != 0)
         fileProperties.add(FileProperties.Managed);
@@ -91,12 +91,12 @@ public final class FileTypeDetector {
     }
   }
 
-  private static @Nullable EnumSet<FileProperties> IsMsi(SeekableByteChannel stream) {
+  private static @Nullable EnumSet<FileProperties> isMsi(SeekableByteChannel stream) {
     // Note: OLE Compound File format (OLECF) by Microsoft
     try {
       BinaryReader reader = new BinaryReader(ReadUtils.rewind(stream));
       // OLE CF magic 0xE11AB1A1E011CFD0
-      if (reader.ReadInt64() != -2226271756974174256L)
+      if (reader.readInt64() != -2226271756974174256L)
         return null;
       return enumSetOf(FileProperties.UnknownType);
     } catch (IOException ex) {
@@ -104,15 +104,15 @@ public final class FileTypeDetector {
     }
   }
 
-  private static @Nullable EnumSet<FileProperties> IsElf(SeekableByteChannel stream) {
+  private static @Nullable EnumSet<FileProperties> isElf(SeekableByteChannel stream) {
     try {
       BinaryReader reader = new BinaryReader(ReadUtils.rewind(stream));
 
       // Note: See https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
-      if (reader.ReadUInt32() != 0x464C457F) // e_ident[EI_MAG0..EI_MAG3] (LE: \x7FELF)
+      if (reader.readUInt32() != 0x464C457F) // e_ident[EI_MAG0..EI_MAG3] (LE: \x7FELF)
         return null;
 
-      int classVal = reader.ReadByte() & 0xFF; // e_ident[EI_CLASS]
+      int classVal = reader.readByte() & 0xFF; // e_ident[EI_CLASS]
       boolean is64;
       if (classVal == 1) {
         is64 = false;
@@ -122,7 +122,7 @@ public final class FileTypeDetector {
         return null;
       }
 
-      int dataVal = reader.ReadByte() & 0xFF; // e_ident[EI_DATA]
+      int dataVal = reader.readByte() & 0xFF; // e_ident[EI_DATA]
       boolean isBe;
       if (dataVal == 1) {
         isBe = false;
@@ -132,14 +132,14 @@ public final class FileTypeDetector {
         return null;
       }
 
-      if ((reader.ReadByte() & 0xFF) != 1) // e_ident[EI_VERSION]
+      if ((reader.readByte() & 0xFF) != 1) // e_ident[EI_VERSION]
         return null;
 
       ReadUtils.seek(stream, 9, SeekOrigin.Current);
-      int eType = reader.ReadUInt16Le(isBe) & 0xFFFF; // e_type
+      int eType = reader.readUInt16Le(isBe) & 0xFFFF; // e_type
       ReadUtils.seek(stream, 2, SeekOrigin.Current);
 
-      if (Integer.toUnsignedLong(reader.ReadUInt32Le(isBe)) != 1L) // e_version
+      if (Integer.toUnsignedLong(reader.readUInt32Le(isBe)) != 1L) // e_version
         return null;
 
       if (eType == 0x02) return enumSetOf(FileProperties.ExecutableType); // ET_EXEC
@@ -148,20 +148,20 @@ public final class FileTypeDetector {
       ReadUtils.seek(stream, is64 ? 8 : 4, SeekOrigin.Current);
       long ePhOff; // e_phoff
       if (is64) {
-        ePhOff = reader.ReadUInt64Le(isBe);
+        ePhOff = reader.readUInt64Le(isBe);
       } else {
-        ePhOff = Integer.toUnsignedLong(reader.ReadUInt32Le(isBe));
+        ePhOff = Integer.toUnsignedLong(reader.readUInt32Le(isBe));
       }
 
       ReadUtils.seek(stream, is64 ? 0x10 : 0xC, SeekOrigin.Current);
-      int ePhNum = reader.ReadUInt16Le(isBe) & 0xFFFF; // e_phnum
+      int ePhNum = reader.readUInt16Le(isBe) & 0xFFFF; // e_phnum
 
       ReadUtils.seek(stream, ePhOff, SeekOrigin.Begin);
 
       boolean hasExecutable = false;
 
       while (ePhNum-- > 0) {
-        if (reader.ReadUInt32Le(isBe) == 0x00000003) // PT_INTERP
+        if (reader.readUInt32Le(isBe) == 0x00000003) // PT_INTERP
           hasExecutable = true;
         ReadUtils.seek(stream, is64 ? 0x34 : 0x1C, SeekOrigin.Current);
       }
@@ -173,21 +173,21 @@ public final class FileTypeDetector {
   }
 
   /** Returns (fileProperties, architectureList) or null if not a Mach-O. */
-  private static AbstractMap.@Nullable SimpleImmutableEntry<EnumSet<FileProperties>, List<ProcessorArchitecture>> TryParseMachO(SeekableByteChannel stream) {
+  private static AbstractMap.@Nullable SimpleImmutableEntry<EnumSet<FileProperties>, List<ProcessorArchitecture>> tryParseMachO(SeekableByteChannel stream) {
     try {
       BinaryReader reader = new BinaryReader(ReadUtils.rewind(stream));
-      long masterMagic = Integer.toUnsignedLong(reader.ReadUInt32()); // mach_header::magic / mach_header64::magic / fat_header::magic
+      long masterMagic = Integer.toUnsignedLong(reader.readUInt32()); // mach_header::magic / mach_header64::magic / fat_header::magic
       AbstractMap.SimpleImmutableEntry<EnumSet<FileProperties>, List<ProcessorArchitecture>> result =
-        ReadFatHeader(reader, stream, masterMagic);
+        readFatHeader(reader, stream, masterMagic);
       if (result == null)
-        result = ReadHeader(reader, stream, masterMagic);
+        result = readHeader(reader, stream, masterMagic);
       return result;
     } catch (IOException ex) {
       return null;
     }
   }
 
-  private static AbstractMap.@Nullable SimpleImmutableEntry<EnumSet<FileProperties>, List<ProcessorArchitecture>> ReadHeader(
+  private static AbstractMap.@Nullable SimpleImmutableEntry<EnumSet<FileProperties>, List<ProcessorArchitecture>> readHeader(
     BinaryReader reader, SeekableByteChannel stream, long magic) throws IOException {
 
     // Note: See https://opensource.apple.com/source/xnu/xnu-2050.18.24/EXTERNAL_HEADERS/mach-o/loader.h
@@ -205,7 +205,7 @@ public final class FileTypeDetector {
     final int CPU_TYPE_ARM64 = 12 | CPU_ARCH_ABI64;
 
     boolean isBe = isBe32 || isBe64;
-    int cpuType = reader.ReadUInt32Le(isBe); // mach_header::cputype / mach_header_64::cputype
+    int cpuType = reader.readUInt32Le(isBe); // mach_header::cputype / mach_header_64::cputype
     ProcessorArchitecture cputype;
     if (cpuType == CPU_TYPE_X86) {
       cputype = ProcessorArchitecture.PROCESSOR_ARCHITECTURE_INTEL;
@@ -219,7 +219,7 @@ public final class FileTypeDetector {
 
     ReadUtils.seek(stream, 4, SeekOrigin.Current);
 
-    int fileType = reader.ReadUInt32Le(isBe); // mach_header::filetype / mach_header_64::filetype
+    int fileType = reader.readUInt32Le(isBe); // mach_header::filetype / mach_header_64::filetype
     EnumSet<FileProperties> fileProperties = enumSetOf(
       switch (fileType) {
         case 0x2 -> FileProperties.ExecutableType;    // MH_EXECUTE
@@ -229,12 +229,12 @@ public final class FileTypeDetector {
       }
     );
 
-    int ncmds = reader.ReadUInt32Le(isBe); // mach_header::ncmds / mach_header_64::ncmds
+    int ncmds = reader.readUInt32Le(isBe); // mach_header::ncmds / mach_header_64::ncmds
     ReadUtils.seek(stream, (isLe64 || isBe64) ? 0xC : 0x8, SeekOrigin.Current); // load_command[0]
 
     while (ncmds-- > 0) {
-      int cmd = reader.ReadUInt32Le(isBe);     // load_command::cmd
-      int cmdsize = reader.ReadUInt32Le(isBe); // load_command::cmdsize
+      int cmd = reader.readUInt32Le(isBe);     // load_command::cmd
+      int cmdsize = reader.readUInt32Le(isBe); // load_command::cmdsize
       ReadUtils.seek(stream, Integer.toUnsignedLong(cmdsize) - 8, SeekOrigin.Current);
 
       if (Integer.toUnsignedLong(cmd) == 0x1DL) // LC_CODE_SIGNATURE
@@ -245,7 +245,7 @@ public final class FileTypeDetector {
     return pair(fileProperties, archList);
   }
 
-  private static AbstractMap.@Nullable SimpleImmutableEntry<EnumSet<FileProperties>, List<ProcessorArchitecture>> ReadFatHeader(
+  private static AbstractMap.@Nullable SimpleImmutableEntry<EnumSet<FileProperties>, List<ProcessorArchitecture>> readFatHeader(
     BinaryReader reader, SeekableByteChannel stream, long magic) throws IOException {
 
     // Note: See https://opensource.apple.com/source/xnu/xnu-344/EXTERNAL_HEADERS/mach-o/fat.h
@@ -258,21 +258,21 @@ public final class FileTypeDetector {
       return null;
 
     boolean isBe = isBe32 || isBe64;
-    int nFatArch = reader.ReadUInt32Le(isBe); // fat_header::nfat_arch
+    int nFatArch = reader.readUInt32Le(isBe); // fat_header::nfat_arch
     List<Long> offsets = new ArrayList<>();
 
     if (isBe64 || isLe64) {
       int n = nFatArch;
       while (n-- > 0) {
         ReadUtils.seek(stream, 8, SeekOrigin.Current);
-        offsets.add(reader.ReadUInt64Le(isBe64)); // fat_arch_64::offset
+        offsets.add(reader.readUInt64Le(isBe64)); // fat_arch_64::offset
         ReadUtils.seek(stream, 16, SeekOrigin.Current);
       }
     } else {
       int n = nFatArch;
       while (n-- > 0) {
         ReadUtils.seek(stream, 8, SeekOrigin.Current);
-        offsets.add(Integer.toUnsignedLong(reader.ReadUInt32Le(isBe32))); // fat_arch::offset
+        offsets.add(Integer.toUnsignedLong(reader.readUInt32Le(isBe32))); // fat_arch::offset
         ReadUtils.seek(stream, 8, SeekOrigin.Current);
       }
     }
@@ -283,9 +283,9 @@ public final class FileTypeDetector {
 
     for (long offset : offsets) {
       ReadUtils.seek(stream, offset, SeekOrigin.Begin);
-      long hdrMagic = Integer.toUnsignedLong(reader.ReadUInt32()); // mach_header::magic / mach_header64::magic
+      long hdrMagic = Integer.toUnsignedLong(reader.readUInt32()); // mach_header::magic / mach_header64::magic
       AbstractMap.SimpleImmutableEntry<EnumSet<FileProperties>, List<ProcessorArchitecture>> fileProperties =
-        ReadHeader(reader, stream, hdrMagic);
+        readHeader(reader, stream, hdrMagic);
       if (fileProperties != null) {
         fileArchitecturesList.add(fileProperties.getValue().get(0));
         filePropertiesList.add(fileProperties.getKey());
@@ -306,7 +306,7 @@ public final class FileTypeDetector {
 
     // Check that all headers have compatible file properties (ignoring signed flag)
     Set<EnumSet<FileProperties>> distinct = new HashSet<>();
-    for (EnumSet<FileProperties> fp : filePropertiesList) {
+    for (@Nullable EnumSet<FileProperties> fp : filePropertiesList) {
       if (fp == null) continue;
       EnumSet<FileProperties> copy = EnumSet.copyOf(fp);
       if (!signed) copy.remove(FileProperties.Signed);
@@ -329,13 +329,13 @@ public final class FileTypeDetector {
     return pair(totalFileProperty, fileArchitecturesList);
   }
 
-  private static @Nullable EnumSet<FileProperties> IsShebangScript(SeekableByteChannel stream) {
+  private static @Nullable EnumSet<FileProperties> isShebangScript(SeekableByteChannel stream) {
     try {
       BinaryReader reader = new BinaryReader(ReadUtils.rewind(stream));
-      if ((char) (reader.ReadByte() & 0xFF) == '#' && (char) (reader.ReadByte() & 0xFF) == '!') {
-        char c = (char) (reader.ReadByte() & 0xFF);
+      if ((char) (reader.readByte() & 0xFF) == '#' && (char) (reader.readByte() & 0xFF) == '!') {
+        char c = (char) (reader.readByte() & 0xFF);
         while (c == ' ' || c == '\t')
-          c = (char) (reader.ReadByte() & 0xFF);
+          c = (char) (reader.readByte() & 0xFF);
         if (c == '/')
           return enumSetOf(FileProperties.ExecutableType);
       }

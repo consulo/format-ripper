@@ -14,34 +14,34 @@ import java.util.List;
 public class CrlProvider {
   private static final Logger LOG = LoggerFactory.getLogger(CrlProvider.class);
 
-  private final CrlSource _crlSource;
-  private final CrlCacheFileSystem _crlCash;
+  private final CrlSource crlSource;
+  private final CrlCacheFileSystem crlCash;
 
   public CrlProvider() {
     this(new CrlSource(), new CrlCacheFileSystem());
   }
 
   public CrlProvider(CrlSource crlSource, CrlCacheFileSystem crlCash) {
-    _crlSource = crlSource;
-    _crlCash = crlCash;
+    this.crlSource = crlSource;
+    this.crlCash = crlCash;
   }
 
-  public Collection<X509CRLHolder> GetCrlsAsync(X509CertificateHolder cert) throws Exception {
+  public Collection<X509CRLHolder> getCrlsAsync(X509CertificateHolder cert) throws Exception {
     String crlId;
     try {
-      crlId = BcExt.GetAuthorityKeyIdentifier(cert);
-      if (crlId == null) crlId = BcExt.Thumbprint(cert);
+      crlId = BcExt.getAuthorityKeyIdentifier(cert);
+      if (crlId == null) crlId = BcExt.thumbprint(cert);
     } catch (Exception e) {
-      crlId = BcExt.Thumbprint(cert);
+      crlId = BcExt.thumbprint(cert);
     }
 
-    Collection<X509CRLHolder> res = _crlCash.GetCrls(crlId);
+    Collection<X509CRLHolder> res = crlCash.getCrls(crlId);
     if (!res.isEmpty() && !crlsIsOutDate(res))
       return res;
 
-    List<String> urls = BcExt.GetCrlDistributionUrls(cert);
+    List<String> urls = BcExt.getCrlDistributionUrls(cert);
     if (urls.isEmpty())
-      LOG.warn("No CRL distribution urls in certificate {}", BcExt.FormatId(cert));
+      LOG.warn("No CRL distribution urls in certificate {}", BcExt.formatId(cert));
 
     Collection<byte[]> crlsData = downloadCrlsAsync(urls);
 
@@ -55,14 +55,14 @@ public class CrlProvider {
       }
     }
 
-    _crlCash.UpdateCrls(crlId, crlDataList);
+    crlCash.updateCrls(crlId, crlDataList);
     return crls;
   }
 
   private Collection<byte[]> downloadCrlsAsync(Collection<String> urls) throws Exception {
     List<byte[]> res = new ArrayList<>();
     for (String url : urls) {
-      byte[] crlData = _crlSource.GetCrlAsync(url);
+      byte[] crlData = crlSource.getCrlAsync(url);
       if (crlData != null)
         res.add(crlData);
     }
@@ -70,7 +70,7 @@ public class CrlProvider {
   }
 
   private boolean crlsIsOutDate(Collection<X509CRLHolder> crls) {
-    Date now = Utils.ConvertToDate(LocalDateTime.now());
+    Date now = Utils.convertToDate(LocalDateTime.now());
     for (X509CRLHolder crl : crls) {
       if (crl.getNextUpdate() != null && crl.getNextUpdate().before(now))
         return true;

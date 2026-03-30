@@ -22,7 +22,7 @@ class FileTypeDetectorTest {
                           EnumSet<FileProperties> expectedFileProperties) throws Exception {
     AbstractMap.SimpleImmutableEntry<FileType, EnumSet<FileProperties>> result;
     try (SeekableByteChannel channel = TestUtil.getTestByteChannel(filename)) {
-      result = FileTypeDetector.DetectFileType(channel);
+      result = FileTypeDetector.detectFileType(channel);
     }
 
     Assertions.assertEquals(expectedFileType, result.getKey());

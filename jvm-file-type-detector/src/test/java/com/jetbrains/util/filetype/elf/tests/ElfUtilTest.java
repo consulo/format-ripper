@@ -18,18 +18,18 @@ class ElfUtilTest {
                    long expectedFlags, String expectedInterpreter) throws Exception {
     ElfInfo elfInfo;
     try (var channel = TestUtil.getTestByteChannel("elf", filename)) {
-      elfInfo = ElfUtil.GetElfInfo(channel);
+      elfInfo = ElfUtil.getElfInfo(channel);
     }
 
     Assertions.assertNotNull(elfInfo);
-    Assertions.assertEquals(expectedClass, elfInfo.ElfClass());
-    Assertions.assertEquals(expectedData, elfInfo.Data());
-    Assertions.assertEquals(expectedOsAbi, elfInfo.OsAbi());
-    Assertions.assertEquals(expectedOsAbiVersion, elfInfo.OsAbiVersion());
-    Assertions.assertEquals(expectedType, elfInfo.Type());
-    Assertions.assertEquals(expectedMachine, elfInfo.Machine());
-    Assertions.assertEquals(expectedFlags, elfInfo.Flags());
-    Assertions.assertEquals(expectedInterpreter, elfInfo.Interpreter());
+    Assertions.assertEquals(expectedClass, elfInfo.getElfClass());
+    Assertions.assertEquals(expectedData, elfInfo.getData());
+    Assertions.assertEquals(expectedOsAbi, elfInfo.getOsAbi());
+    Assertions.assertEquals(expectedOsAbiVersion, elfInfo.getOsAbiVersion());
+    Assertions.assertEquals(expectedType, elfInfo.getType());
+    Assertions.assertEquals(expectedMachine, elfInfo.getMachine());
+    Assertions.assertEquals(expectedFlags, elfInfo.getFlags());
+    Assertions.assertEquals(expectedInterpreter, elfInfo.getInterpreter());
   }
 
   static Stream<Arguments> ElfInfoTestProvider() {

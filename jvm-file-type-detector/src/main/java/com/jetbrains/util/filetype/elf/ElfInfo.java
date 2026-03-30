@@ -33,13 +33,4 @@ public class ElfInfo {
   public long getFlags() { return flags; }
   public @Nullable String getInterpreter() { return interpreter; }
 
-  // Kotlin-style accessors
-  public ElfClass ElfClass() { return elfClass; }
-  public ElfData Data() { return data; }
-  public ElfOsAbi OsAbi() { return osAbi; }
-  public byte OsAbiVersion() { return osAbiVersion; }
-  public ElfType Type() { return type; }
-  public ElfMachine Machine() { return machine; }
-  public long Flags() { return flags; }
-  public @Nullable String Interpreter() { return interpreter; }
 }

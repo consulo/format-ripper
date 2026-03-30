@@ -30,27 +30,27 @@ import java.util.Collection;
 import java.util.List;
 
 public class BcExt {
-  public static String Dump(org.bouncycastle.asn1.ASN1Encodable obj) {
+  public static String dump(org.bouncycastle.asn1.ASN1Encodable obj) {
     return ASN1Dump.dumpAsString(obj);
   }
 
-  public static void DumpToConsole(org.bouncycastle.asn1.ASN1Encodable obj) {
-    System.out.println(Dump(obj));
+  public static void dumpToConsole(org.bouncycastle.asn1.ASN1Encodable obj) {
+    System.out.println(dump(obj));
   }
 
-  public static String SN(Certificate cert) throws Exception {
-    return ConvertToHexString(cert.getSerialNumber().getValue().toByteArray()).toUpperCase();
+  public static String sn(Certificate cert) throws Exception {
+    return convertToHexString(cert.getSerialNumber().getValue().toByteArray()).toUpperCase();
   }
 
-  public static String Thumbprint(Certificate cert) throws Exception {
-    return ConvertToHexString(MessageDigest.getInstance("SHA1").digest(cert.getEncoded()));
+  public static String thumbprint(Certificate cert) throws Exception {
+    return convertToHexString(MessageDigest.getInstance("SHA1").digest(cert.getEncoded()));
   }
 
-  public static String Thumbprint(X509CertificateHolder cert) throws Exception {
-    return ConvertToHexString(MessageDigest.getInstance("SHA1").digest(cert.getEncoded()));
+  public static String thumbprint(X509CertificateHolder cert) throws Exception {
+    return convertToHexString(MessageDigest.getInstance("SHA1").digest(cert.getEncoded()));
   }
 
-  public static String ConvertToHexString(byte[] bytes) {
+  public static String convertToHexString(byte[] bytes) {
     StringBuilder sb = new StringBuilder();
     for (byte b : bytes) {
       sb.append(String.format("%02x", b));
@@ -58,11 +58,11 @@ public class BcExt {
     return sb.toString();
   }
 
-  public static String GetOcspUrl(Certificate cert) {
+  public static String getOcspUrl(Certificate cert) {
     return getOcspUrl(cert.getTBSCertificate().getExtensions());
   }
 
-  public static String GetOcspUrl(X509CertificateHolder cert) {
+  public static String getOcspUrl(X509CertificateHolder cert) {
     return getOcspUrl(cert.getExtensions());
   }
 
@@ -78,7 +78,7 @@ public class BcExt {
     return null;
   }
 
-  public static List<String> GetCrlDistributionUrls(X509CertificateHolder cert) throws Exception {
+  public static List<String> getCrlDistributionUrls(X509CertificateHolder cert) throws Exception {
     List<String> res = new ArrayList<>();
     CRLDistPoint crldp = CRLDistPoint.fromExtensions(cert.getExtensions());
     if (crldp != null) {
@@ -104,25 +104,25 @@ public class BcExt {
     return res;
   }
 
-  public static boolean HasCrlDistributionPoints(Certificate cert) {
+  public static boolean hasCrlDistributionPoints(Certificate cert) {
     CRLDistPoint crldp = CRLDistPoint.fromExtensions(cert.getTBSCertificate().getExtensions());
     return crldp != null;
   }
 
-  public static boolean IsSelfSigned(Certificate cert) {
+  public static boolean isSelfSigned(Certificate cert) {
     return cert.getIssuer().equals(cert.getSubject());
   }
 
-  public static boolean IsSelfSigned(X509CertificateHolder cert) {
+  public static boolean isSelfSigned(X509CertificateHolder cert) {
     return cert.getIssuer().equals(cert.getSubject());
   }
 
-  public static boolean CanSignOcspResponses(Certificate cert) {
+  public static boolean canSignOcspResponses(Certificate cert) {
     Collection<String> eku = GetExtendedKeyUsage(cert);
     return eku != null && eku.contains(KeyPurposeId.id_kp_OCSPSigning.getId());
   }
 
-  public static boolean CanSignOcspResponses(X509CertificateHolder cert) {
+  public static boolean canSignOcspResponses(X509CertificateHolder cert) {
     Collection<String> eku = GetExtendedKeyUsage(cert);
     return eku != null && eku.contains(KeyPurposeId.id_kp_OCSPSigning.getId());
   }
@@ -155,44 +155,44 @@ public class BcExt {
     return ASN1Primitive.fromByteArray(enc.toASN1Primitive().getEncoded());
   }
 
-  public static String GetAuthorityKeyIdentifier(Certificate cert) throws Exception {
+  public static String getAuthorityKeyIdentifier(Certificate cert) throws Exception {
     AuthorityKeyIdentifier ki = AuthorityKeyIdentifier.fromExtensions(cert.getTBSCertificate().getExtensions());
     if (ki == null || ki.getKeyIdentifier() == null) return null;
-    return ConvertToHexString(ki.getKeyIdentifier());
+    return convertToHexString(ki.getKeyIdentifier());
   }
 
-  public static String GetAuthorityKeyIdentifier(X509CertificateHolder cert) throws Exception {
+  public static String getAuthorityKeyIdentifier(X509CertificateHolder cert) throws Exception {
     AuthorityKeyIdentifier ki = AuthorityKeyIdentifier.fromExtensions(cert.getExtensions());
     if (ki == null || ki.getKeyIdentifier() == null) return null;
-    return ConvertToHexString(ki.getKeyIdentifier());
+    return convertToHexString(ki.getKeyIdentifier());
   }
 
-  public static String GetSubjectKeyIdentifier(Certificate cert) throws Exception {
+  public static String getSubjectKeyIdentifier(Certificate cert) throws Exception {
     SubjectKeyIdentifier ki = SubjectKeyIdentifier.fromExtensions(cert.getTBSCertificate().getExtensions());
     if (ki == null || ki.getKeyIdentifier() == null) return null;
-    return ConvertToHexString(ki.getKeyIdentifier());
+    return convertToHexString(ki.getKeyIdentifier());
   }
 
-  public static byte[] GetSubjectKeyIdentifierRaw(Certificate cert) {
+  public static byte[] getSubjectKeyIdentifierRaw(Certificate cert) {
     SubjectKeyIdentifier ki = SubjectKeyIdentifier.fromExtensions(cert.getTBSCertificate().getExtensions());
     return ki != null ? ki.getKeyIdentifier() : null;
   }
 
-  public static byte[] GetSubjectKeyIdentifierRaw(X509CertificateHolder cert) {
+  public static byte[] getSubjectKeyIdentifierRaw(X509CertificateHolder cert) {
     SubjectKeyIdentifier ki = SubjectKeyIdentifier.fromExtensions(cert.getExtensions());
     return ki != null ? ki.getKeyIdentifier() : null;
   }
 
-  public static String FormatId(Certificate cert) throws Exception {
-    return "Issuer=" + cert.getIssuer() + "; SN=" + SN(cert);
+  public static String formatId(Certificate cert) throws Exception {
+    return "Issuer=" + cert.getIssuer() + "; SN=" + sn(cert);
   }
 
-  public static String FormatId(X509CertificateHolder cert) throws Exception {
+  public static String formatId(X509CertificateHolder cert) throws Exception {
     Certificate asn1Cert = cert.toASN1Structure();
-    return "Issuer=" + asn1Cert.getIssuer() + "; SN=" + SN(asn1Cert);
+    return "Issuer=" + asn1Cert.getIssuer() + "; SN=" + sn(asn1Cert);
   }
 
-  public static org.bouncycastle.asn1.ASN1Encodable GetFirstAttributeValue(AttributeTable table, ASN1ObjectIdentifier oid) {
+  public static org.bouncycastle.asn1.ASN1Encodable getFirstAttributeValue(AttributeTable table, ASN1ObjectIdentifier oid) {
     org.bouncycastle.asn1.cms.Attribute attr = table.get(oid);
     if (attr != null && attr.getAttrValues().size() > 0) {
       return attr.getAttributeValues()[0];
@@ -200,39 +200,39 @@ public class BcExt {
     return null;
   }
 
-  public static X509Certificate ToJavaX509Certificate(X509CertificateHolder cert) throws Exception {
+  public static X509Certificate toJavaX509Certificate(X509CertificateHolder cert) throws Exception {
     CertificateFactory cf = CertificateFactory.getInstance("X.509");
     try (ByteArrayInputStream bis = new ByteArrayInputStream(cert.getEncoded())) {
       return (X509Certificate) cf.generateCertificate(bis);
     }
   }
 
-  public static X509CRL ToJavaX509Crl(X509CRLHolder crl) throws Exception {
+  public static X509CRL toJavaX509Crl(X509CRLHolder crl) throws Exception {
     CertificateFactory cf = CertificateFactory.getInstance("X.509");
     try (ByteArrayInputStream bis = new ByteArrayInputStream(crl.getEncoded())) {
       return (X509CRL) cf.generateCRL(bis);
     }
   }
 
-  public static CertStore ToJavaCertStore(Store<X509CertificateHolder> store) throws Exception {
+  public static CertStore toJavaCertStore(Store<X509CertificateHolder> store) throws Exception {
     List<X509Certificate> certs = new ArrayList<>();
     for (X509CertificateHolder holder : store.getMatches(null)) {
-      certs.add(ToJavaX509Certificate(holder));
+      certs.add(toJavaX509Certificate(holder));
     }
     CollectionCertStoreParameters params = new CollectionCertStoreParameters(certs);
     return CertStore.getInstance("Collection", params);
   }
 
-  public static CertStore ToJavaCrlStore(Store<X509CRLHolder> store) throws Exception {
+  public static CertStore toJavaCrlStore(Store<X509CRLHolder> store) throws Exception {
     List<X509CRL> crls = new ArrayList<>();
     for (X509CRLHolder holder : store.getMatches(null)) {
-      crls.add(ToJavaX509Crl(holder));
+      crls.add(toJavaX509Crl(holder));
     }
     CollectionCertStoreParameters params = new CollectionCertStoreParameters(crls);
     return CertStore.getInstance("Collection", params);
   }
 
-  public static X509CertificateHolder ToX509CertificateHolder(java.security.cert.Certificate cert) throws Exception {
+  public static X509CertificateHolder toX509CertificateHolder(java.security.cert.Certificate cert) throws Exception {
     return new X509CertificateHolder(cert.getEncoded());
   }
 }

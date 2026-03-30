@@ -43,17 +43,17 @@ class FakePkiTest {
   private final Clock localClock = Clock.systemDefaultZone();
 
   private Date nowPlusDays(long days) {
-    return Utils.ConvertToDate(LocalDateTime.now(localClock).plusDays(days));
+    return Utils.convertToDate(LocalDateTime.now(localClock).plusDays(days));
   }
 
   private Date nowPlusSeconds(long seconds) {
-    return Utils.ConvertToDate(LocalDateTime.now(localClock).plusSeconds(seconds));
+    return Utils.convertToDate(LocalDateTime.now(localClock).plusSeconds(seconds));
   }
 
   @ParameterizedTest
   @MethodSource("FakePkiTestProvider")
   void InvalidSignatureNoSignerCert(String peResourceName) throws Exception {
-    FakePki pki = FakePki.CreateRoot("fakeroot", nowPlusDays(-1), nowPlusDays(10));
+    FakePki pki = FakePki.createRoot("fakeroot", nowPlusDays(-1), nowPlusDays(10));
     AbstractMap.SimpleImmutableEntry<KeyPair, X509CertificateHolder> pair =
       pki.Enroll("sub", nowPlusDays(0), nowPlusDays(9), false);
     KeyPair keyPair = pair.getKey();
@@ -62,14 +62,14 @@ class FakePkiTest {
     try (SeekableByteChannel peStream = TestUtil.getTestByteChannelCopy("pe", peResourceName);
          SeekableByteChannel signedPeStream = signPe(peStream, keyPair.getPrivate(), cert, false)) {
       PeFile peFile = new PeFile(signedPeStream);
-      var signatureData = peFile.GetSignatureData();
-      var signedMessage = SignedMessage.CreateInstance(signatureData);
+      var signatureData = peFile.getSignatureData();
+      var signedMessage = SignedMessage.createInstance(signatureData);
 
       try (InputStream signRootCertStore = getRootStoreStream(pki.getCertificate())) {
         SignatureVerificationParams verificationParams = new SignatureVerificationParams(signRootCertStore, null, true, false);
         SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
-        var res = signedMessageVerifier.VerifySignatureAsync(signedMessage, verificationParams);
-        Assertions.assertEquals(VerifySignatureStatus.InvalidSignature, res.Status());
+        var res = signedMessageVerifier.verifySignatureAsync(signedMessage, verificationParams);
+        Assertions.assertEquals(VerifySignatureStatus.InvalidSignature, res.getStatus());
       }
     }
   }
@@ -77,35 +77,35 @@ class FakePkiTest {
   @ParameterizedTest
   @MethodSource("FakePkiTestProvider")
   void InvalidChainCertRevoked(String peResourceName) throws Exception {
-    FakePki pki = FakePki.CreateRoot("fakeroot", nowPlusDays(-1), nowPlusDays(10));
+    FakePki pki = FakePki.createRoot("fakeroot", nowPlusDays(-1), nowPlusDays(10));
     AbstractMap.SimpleImmutableEntry<KeyPair, X509CertificateHolder> pair =
       pki.Enroll("sub", nowPlusDays(0), nowPlusDays(9), true);
     KeyPair keyPair = pair.getKey();
     X509CertificateHolder cert = pair.getValue();
 
-    pki.Revoke(cert, true);
+    pki.revoke(cert, true);
     Thread.sleep(2000);
 
     CrlCacheFileSystem crlCache = Mockito.mock(CrlCacheFileSystem.class);
-    Mockito.when(crlCache.GetCrls(Mockito.anyString())).thenReturn(Collections.emptyList());
-    Mockito.doNothing().when(crlCache).UpdateCrls(Mockito.anyString(), Mockito.anyList());
+    Mockito.when(crlCache.getCrls(Mockito.anyString())).thenReturn(Collections.emptyList());
+    Mockito.doNothing().when(crlCache).updateCrls(Mockito.anyString(), Mockito.anyList());
 
     CrlSource crlSource = Mockito.mock(CrlSource.class);
-    Mockito.when(crlSource.GetCrlAsync(Mockito.anyString()))
+    Mockito.when(crlSource.getCrlAsync(Mockito.anyString()))
       .thenReturn(pki.getCrl() != null ? pki.getCrl().getEncoded() : null);
 
     try (SeekableByteChannel peStream = TestUtil.getTestByteChannelCopy("pe", peResourceName);
          SeekableByteChannel signedPeStream = signPe(peStream, keyPair.getPrivate(), cert)) {
       PeFile peFile = new PeFile(signedPeStream);
-      var signatureData = peFile.GetSignatureData();
-      var signedMessage = SignedMessage.CreateInstance(signatureData);
+      var signatureData = peFile.getSignatureData();
+      var signedMessage = SignedMessage.createInstance(signatureData);
 
       try (InputStream signRootCertStore = getRootStoreStream(pki.getCertificate())) {
         SignatureVerificationParams verificationParams = new SignatureVerificationParams(signRootCertStore, null, true, true);
         SignedMessageVerifier signedMessageVerifier =
           new SignedMessageVerifier(new CrlProvider(crlSource, crlCache));
-        var res = signedMessageVerifier.VerifySignatureAsync(signedMessage, verificationParams);
-        Assertions.assertEquals(VerifySignatureStatus.InvalidChain, res.Status());
+        var res = signedMessageVerifier.verifySignatureAsync(signedMessage, verificationParams);
+        Assertions.assertEquals(VerifySignatureStatus.InvalidChain, res.getStatus());
       }
     }
   }
@@ -113,7 +113,7 @@ class FakePkiTest {
   @ParameterizedTest
   @MethodSource("FakePkiTestProvider")
   void InvalidChainCertOutdated(String peResourceName) throws Exception {
-    FakePki pki = FakePki.CreateRoot("fakeroot", nowPlusDays(-1), nowPlusDays(10));
+    FakePki pki = FakePki.createRoot("fakeroot", nowPlusDays(-1), nowPlusDays(10));
     AbstractMap.SimpleImmutableEntry<KeyPair, X509CertificateHolder> pair =
       pki.Enroll("sub", nowPlusDays(0), nowPlusSeconds(1), false);
     KeyPair keyPair = pair.getKey();
@@ -124,12 +124,12 @@ class FakePkiTest {
     try (SeekableByteChannel peStream = TestUtil.getTestByteChannelCopy("pe", peResourceName);
          SeekableByteChannel signedPeStream = signPe(peStream, keyPair.getPrivate(), cert)) {
       PeFile peFile = new PeFile(signedPeStream);
-      var signatureData = peFile.GetSignatureData();
-      var signedMessage = SignedMessage.CreateInstance(signatureData);
+      var signatureData = peFile.getSignatureData();
+      var signedMessage = SignedMessage.createInstance(signatureData);
       SignatureVerificationParams verificationParams = new SignatureVerificationParams(null, null, false, false);
       SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
-      var res = signedMessageVerifier.VerifySignatureAsync(signedMessage, verificationParams);
-      Assertions.assertEquals(VerifySignatureStatus.InvalidSignature, res.Status());
+      var res = signedMessageVerifier.verifySignatureAsync(signedMessage, verificationParams);
+      Assertions.assertEquals(VerifySignatureStatus.InvalidSignature, res.getStatus());
     }
   }
 
@@ -171,7 +171,7 @@ class FakePkiTest {
     writer.Write(encodedCmsSignedData);            // bCertificate
 
     // write new ImageDirectoryEntrySecurity
-    ReadUtils.seek(signedPeStream, peFile.ImageDirectoryEntrySecurityOffset(), SeekOrigin.Begin);
+    ReadUtils.seek(signedPeStream, peFile.imageDirectoryEntrySecurityOffset(), SeekOrigin.Begin);
     writer.Write((int) attributeCertificateTableOffset);
     writer.Write(encodedCmsSignedData.length);
 

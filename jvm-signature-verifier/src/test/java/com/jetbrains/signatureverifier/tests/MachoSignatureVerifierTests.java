@@ -26,15 +26,15 @@ class MachoSignatureVerifierTests {
   @MethodSource("VerifySignTestProvider")
   void VerifySignTest(String machoResourceName, VerifySignatureStatus expectedResult) throws Exception {
     try (var channel = Files.newByteChannel(TestUtil.getTestDataFile("mach-o", machoResourceName), StandardOpenOption.READ)) {
-      Collection<MachoFile> machoFiles = new MachoArch(channel).Extract();
+      Collection<MachoFile> machoFiles = new MachoArch(channel).extract();
       SignatureVerificationParams verificationParams = new SignatureVerificationParams(null, null, false, false);
       SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
 
       for (MachoFile machoFile : machoFiles) {
-        var signatureData = machoFile.GetSignatureData();
-        var signedMessage = SignedMessage.CreateInstance(signatureData);
-        var result = signedMessageVerifier.VerifySignatureAsync(signedMessage, verificationParams);
-        Assertions.assertEquals(expectedResult, result.Status());
+        var signatureData = machoFile.getSignatureData();
+        var signedMessage = SignedMessage.createInstance(signatureData);
+        var result = signedMessageVerifier.verifySignatureAsync(signedMessage, verificationParams);
+        Assertions.assertEquals(expectedResult, result.getStatus());
       }
     }
   }
@@ -43,10 +43,10 @@ class MachoSignatureVerifierTests {
   @MethodSource("VerifySignInvalidSignatureFormatTestProvider")
   void VerifySignInvalidSignatureFormat(String machoResourceName) throws Exception {
     try (var channel = Files.newByteChannel(TestUtil.getTestDataFile("mach-o", machoResourceName), StandardOpenOption.READ)) {
-      Collection<MachoFile> machoFiles = new MachoArch(channel).Extract();
+      Collection<MachoFile> machoFiles = new MachoArch(channel).extract();
       for (MachoFile machoFile : machoFiles) {
-        var signatureData = machoFile.GetSignatureData();
-        Exception thrown = Assertions.assertThrows(Exception.class, () -> SignedMessage.CreateInstance(signatureData));
+        var signatureData = machoFile.getSignatureData();
+        Exception thrown = Assertions.assertThrows(Exception.class, () -> SignedMessage.createInstance(signatureData));
         Assertions.assertTrue(thrown.getMessage().contains("Invalid signature format"));
       }
     }
@@ -61,13 +61,13 @@ class MachoSignatureVerifierTests {
 
       List<VerifySignatureStatus> results = new ArrayList<>();
       try (SeekableByteChannel machOFileStream = TestUtil.getTestByteChannel("mach-o", machOResourceName)) {
-        Collection<MachoFile> machoFiles = new MachoArch(machOFileStream).Extract();
+        Collection<MachoFile> machoFiles = new MachoArch(machOFileStream).extract();
         SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
 
         for (MachoFile machoFile : machoFiles) {
-          var signatureData = machoFile.GetSignatureData();
-          var signedMessage = SignedMessage.CreateInstance(signatureData);
-          results.add(signedMessageVerifier.VerifySignatureAsync(signedMessage, verificationParams).Status());
+          var signatureData = machoFile.getSignatureData();
+          var signedMessage = SignedMessage.createInstance(signatureData);
+          results.add(signedMessageVerifier.verifySignatureAsync(signedMessage, verificationParams).getStatus());
         }
       }
 

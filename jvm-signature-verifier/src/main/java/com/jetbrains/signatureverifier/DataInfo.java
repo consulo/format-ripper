@@ -21,16 +21,4 @@ public final class DataInfo {
     return offset == 0 && size == 0;
   }
 
-  // Keep Kotlin-style accessors for compatibility with migrated code
-  public int Offset() {
-    return offset;
-  }
-
-  public int Size() {
-    return size;
-  }
-
-  public boolean IsEmpty() {
-    return isEmpty();
-  }
 }

@@ -19,7 +19,7 @@ public class FakePki {
   private static final ASN1ObjectIdentifier SHA1_WITH_RSA_SIGNATURE = new ASN1ObjectIdentifier("1.2.840.113549.1.1.5");
   private static final int PUBLIC_KEY_LENGTH = 1024;
 
-  public static FakePki CreateRoot(String name, Date utcValidFrom, Date utcValidTo) {
+  public static FakePki createRoot(String name, Date utcValidFrom, Date utcValidTo) {
     if (!utcValidFrom.before(utcValidTo))
       throw new IllegalArgumentException("utcValidTo must be greater than utcValidFrom");
     return new FakePki(name, utcValidFrom, utcValidTo);
@@ -31,27 +31,27 @@ public class FakePki {
     return keyGen.generateKeyPair();
   }
 
-  private final KeyPair _keyPair;
-  private final AlgorithmIdentifier _signatureAlg;
-  private X509CertificateHolder _certificate;
-  private X509CRLHolder _crl;
-  private final List<X509CertificateHolder> _certificates = new ArrayList<>();
+  private final KeyPair keyPair;
+  private final AlgorithmIdentifier signatureAlg;
+  private X509CertificateHolder certificate;
+  private X509CRLHolder crl;
+  private final List<X509CertificateHolder> certificates = new ArrayList<>();
   private final Map<BigInteger, Date> RevokedCertificates = new LinkedHashMap<>();
 
-  public X509CertificateHolder getCertificate() { return _certificate; }
+  public X509CertificateHolder getCertificate() { return certificate; }
 
-  public X509CRLHolder getCrl() { return _crl; }
-  public void setCrl(X509CRLHolder crl) { this._crl = crl; }
+  public X509CRLHolder getCrl() { return crl; }
+  public void setCrl(X509CRLHolder crl) { this.crl = crl; }
 
-  public Collection<X509CertificateHolder> getIssuedCertificates() { return _certificates; }
+  public Collection<X509CertificateHolder> getIssuedCertificates() { return certificates; }
 
   private FakePki(String name, Date validFrom, Date validTo) {
     try {
-      _keyPair = getNewPair();
-      _signatureAlg = new AlgorithmIdentifier(SHA1_WITH_RSA_SIGNATURE);
+      keyPair = getNewPair();
+      signatureAlg = new AlgorithmIdentifier(SHA1_WITH_RSA_SIGNATURE);
       X500Name subject = new X500Name("CN=" + name);
-      _certificate = enroll(subject, _keyPair, name, validFrom, validTo, 0L, false, false);
-      _crl = createCrl();
+      certificate = enroll(subject, keyPair, name, validFrom, validTo, 0L, false, false);
+      crl = createCrl();
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -62,23 +62,23 @@ public class FakePki {
     KeyPair keyPair = getNewPair();
     X509CertificateHolder certificate = enroll(
       getCertificate().getSubject(), keyPair, name, validFrom, validTo,
-      (long) (_certificates.size() + 1), true, codeSign
+      (long) (certificates.size() + 1), true, codeSign
     );
-    _certificates.add(certificate);
+    certificates.add(certificate);
     return new AbstractMap.SimpleImmutableEntry<>(keyPair, certificate);
   }
 
-  public void Revoke(X509CertificateHolder certificate, boolean renewCrl) {
+  public void revoke(X509CertificateHolder certificate, boolean renewCrl) {
     if (isIssued(certificate)) {
-      RevokedCertificates.put(certificate.getSerialNumber(), Utils.ConvertToDate(LocalDateTime.now()));
+      RevokedCertificates.put(certificate.getSerialNumber(), Utils.convertToDate(LocalDateTime.now()));
       if (renewCrl) {
-        try { _crl = createCrl(); } catch (Exception e) { throw new RuntimeException(e); }
+        try { crl = createCrl(); } catch (Exception e) { throw new RuntimeException(e); }
       }
     }
   }
 
-  public void UpdateCrl() throws Exception {
-    _crl = createCrl();
+  public void updateCrl() throws Exception {
+    crl = createCrl();
   }
 
   private boolean isIssued(X509CertificateHolder certificate) {
@@ -100,7 +100,7 @@ public class FakePki {
     SubjectPublicKeyInfo subjectPublicKeyInfo = new SubjectPublicKeyInfo(alg, keyData);
 
     ASN1EncodableVector vec = new ASN1EncodableVector();
-    vec.addAll(new ASN1Encodable[]{version, serialNumber, _signatureAlg, issuerDN, dates, subject, subjectPublicKeyInfo});
+    vec.addAll(new ASN1Encodable[]{version, serialNumber, signatureAlg, issuerDN, dates, subject, subjectPublicKeyInfo});
 
     List<Extension> extValues = new ArrayList<>();
     if (addCrlDp) {
@@ -123,9 +123,9 @@ public class FakePki {
     DERSequence seq = derSequence(vec);
     TBSCertificate tbs = TBSCertificate.getInstance(seq);
     byte[] tbsData = tbs.getEncoded();
-    byte[] sig = sign(tbsData, _keyPair);
+    byte[] sig = sign(tbsData, keyPair);
     org.bouncycastle.asn1.x509.Certificate cs = org.bouncycastle.asn1.x509.Certificate.getInstance(
-      derSequence(tbs, _signatureAlg, new DERBitString(sig))
+      derSequence(tbs, signatureAlg, new DERBitString(sig))
     );
     return new X509CertificateHolder(cs);
   }
@@ -134,14 +134,14 @@ public class FakePki {
     ASN1Integer version = new ASN1Integer(1);
     X500Name issuer = getCertificate().getSubject();
     LocalDateTime now = LocalDateTime.now(Clock.systemUTC()).plusMinutes(1);
-    Time thisUpdate = new Time(Utils.ConvertToDate(now));
-    Time nextUpdate = new Time(Utils.ConvertToDate(now.plusDays(5)));
+    Time thisUpdate = new Time(Utils.convertToDate(now));
+    Time nextUpdate = new Time(Utils.convertToDate(now.plusDays(5)));
     DERSequence revokedCertificates = getRevokedCertificates();
-    DERSequence seq = derSequence(version, _signatureAlg, issuer, thisUpdate, nextUpdate, revokedCertificates);
+    DERSequence seq = derSequence(version, signatureAlg, issuer, thisUpdate, nextUpdate, revokedCertificates);
     TBSCertList tbs = TBSCertList.getInstance(seq);
     byte[] tbsData = tbs.getEncoded();
-    byte[] sig = sign(tbsData, _keyPair);
-    CertificateList certList = CertificateList.getInstance(derSequence(tbs, _signatureAlg, new DERBitString(sig)));
+    byte[] sig = sign(tbsData, keyPair);
+    CertificateList certList = CertificateList.getInstance(derSequence(tbs, signatureAlg, new DERBitString(sig)));
     return new X509CRLHolder(certList);
   }
 
@@ -158,7 +158,7 @@ public class FakePki {
   }
 
   private byte[] sign(byte[] data, KeyPair key) throws Exception {
-    Signature signature = Signature.getInstance(_signatureAlg.getAlgorithm().getId());
+    Signature signature = Signature.getInstance(signatureAlg.getAlgorithm().getId());
     signature.initSign(key.getPrivate());
     signature.update(data);
     return signature.sign();

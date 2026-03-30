@@ -12,10 +12,10 @@ import java.io.IOException;
 public class SignedMessage {
   public final CMSSignedData SignedData;
 
-  public static SignedMessage CreateInstance(SignatureData signatureData) throws Exception {
-    if (signatureData.IsEmpty())
+  public static SignedMessage createInstance(SignatureData signatureData) throws Exception {
+    if (signatureData.isEmpty())
       throw new IllegalArgumentException("signatureData is empty");
-    if (signatureData.HasAttachedSignedData())
+    if (signatureData.hasAttachedSignedData())
       return new SignedMessage(signatureData.getSignedData(), signatureData.getCmsData());
     return new SignedMessage(signatureData.getCmsData());
   }

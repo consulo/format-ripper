@@ -32,7 +32,7 @@ class DefaultRootsTest {
 
     Pattern cnPattern = Pattern.compile("CN=(?<CN>[^,]*)");
     SignatureVerificationParams params = new SignatureVerificationParams(
-      Resources.GetDefaultRoots(), null, true, false
+      Resources.getDefaultRoots(), null, true, false
     );
 
     List<AbstractMap.SimpleImmutableEntry<String, BigInteger>> certificates = new ArrayList<>();

@@ -10,17 +10,17 @@ import java.util.Collection;
 import java.util.HashSet;
 
 public class SignatureVerificationParams {
-  private final InputStream _signRootCertStore;
-  private final InputStream _timestampRootCertStore;
+  private final InputStream signRootCertStore;
+  private final InputStream timestampRootCertStore;
 
-  public final boolean BuildChain;
-  public final boolean WithRevocationCheck;
-  public final Duration OcspResponseTimeout;
-  public final SignatureValidationTimeMode SignValidationTimeMode;
-  public LocalDateTime SignatureValidationTime;
+  public final boolean buildChain;
+  public final boolean withRevocationCheck;
+  public final Duration ocspResponseTimeout;
+  public final SignatureValidationTimeMode signValidationTimeMode;
+  public LocalDateTime signatureValidationTime;
 
-  private boolean _rootCertificatesLoaded = false;
-  private HashSet<TrustAnchor> _rootCertificates = null;
+  private boolean rootCertificatesLoaded = false;
+  private HashSet<TrustAnchor> rootCertificates = null;
 
   public SignatureVerificationParams(InputStream signRootCertStore,
                                      InputStream timestampRootCertStore,
@@ -29,20 +29,20 @@ public class SignatureVerificationParams {
                                      Duration ocspResponseTimeout,
                                      SignatureValidationTimeMode signatureValidationTimeMode,
                                      LocalDateTime signatureValidationTime) {
-    _signRootCertStore = signRootCertStore;
-    _timestampRootCertStore = timestampRootCertStore;
-    BuildChain = buildChain;
-    WithRevocationCheck = withRevocationCheck;
-    OcspResponseTimeout = ocspResponseTimeout != null ? ocspResponseTimeout : Duration.ofSeconds(5);
-    SignValidationTimeMode = signatureValidationTimeMode != null
+    this.signRootCertStore = signRootCertStore;
+    this.timestampRootCertStore = timestampRootCertStore;
+    this.buildChain = buildChain;
+    this.withRevocationCheck = withRevocationCheck;
+    this.ocspResponseTimeout = ocspResponseTimeout != null ? ocspResponseTimeout : Duration.ofSeconds(5);
+    this.signValidationTimeMode = signatureValidationTimeMode != null
       ? signatureValidationTimeMode
       : SignatureValidationTimeMode.Timestamp;
 
-    if (SignValidationTimeMode == SignatureValidationTimeMode.SignValidationTime
+    if (this.signValidationTimeMode == SignatureValidationTimeMode.SignValidationTime
       && signatureValidationTime == null)
       throw new IllegalArgumentException("signatureValidationTime is empty");
 
-    SignatureValidationTime = signatureValidationTime;
+    this.signatureValidationTime = signatureValidationTime;
   }
 
   public SignatureVerificationParams(InputStream signRootCertStore,
@@ -53,29 +53,29 @@ public class SignatureVerificationParams {
       Duration.ofSeconds(5), SignatureValidationTimeMode.Timestamp, null);
   }
 
-  public void SetSignValidationTime(LocalDateTime signValidationTime) {
-    if (SignValidationTimeMode != SignatureValidationTimeMode.Timestamp)
-      throw new IllegalStateException("Invalid SignValidationTimeMode");
-    if (SignatureValidationTime != null)
-      throw new IllegalStateException("SignatureValidationTime already set");
-    SignatureValidationTime = signValidationTime;
+  public void setSignValidationTime(LocalDateTime signValidationTime) {
+    if (signValidationTimeMode != SignatureValidationTimeMode.Timestamp)
+      throw new IllegalStateException("Invalid signValidationTimeMode");
+    if (signatureValidationTime != null)
+      throw new IllegalStateException("signatureValidationTime already set");
+    signatureValidationTime = signValidationTime;
   }
 
   public HashSet<TrustAnchor> getRootCertificates() {
-    if (!_rootCertificatesLoaded) {
-      _rootCertificates = readRootCertificates();
-      _rootCertificatesLoaded = true;
+    if (!rootCertificatesLoaded) {
+      rootCertificates = readRootCertificates();
+      rootCertificatesLoaded = true;
     }
-    return _rootCertificates;
+    return rootCertificates;
   }
 
   private HashSet<TrustAnchor> readRootCertificates() {
-    if (_signRootCertStore == null && _timestampRootCertStore == null) return null;
+    if (signRootCertStore == null && timestampRootCertStore == null) return null;
 
     HashSet<TrustAnchor> rootCerts = new HashSet<>();
     try {
-      if (_signRootCertStore != null) addCerts(_signRootCertStore, rootCerts);
-      if (_timestampRootCertStore != null) addCerts(_timestampRootCertStore, rootCerts);
+      if (signRootCertStore != null) addCerts(signRootCertStore, rootCerts);
+      if (timestampRootCertStore != null) addCerts(timestampRootCertStore, rootCerts);
     } catch (Exception e) {
       throw new RuntimeException("Failed to read root certificates", e);
     }
@@ -92,10 +92,10 @@ public class SignatureVerificationParams {
 
   @Override
   public String toString() {
-    return "BuildChain: " + BuildChain
-      + ", WithRevocationCheck: " + WithRevocationCheck
-      + ", OcspResponseTimeout: " + OcspResponseTimeout
-      + ", SignValidationTimeMode: " + SignValidationTimeMode
-      + ", SignatureValidationTime: " + SignatureValidationTime;
+    return "buildChain: " + buildChain
+      + ", withRevocationCheck: " + withRevocationCheck
+      + ", ocspResponseTimeout: " + ocspResponseTimeout
+      + ", signValidationTimeMode: " + signValidationTimeMode
+      + ", signatureValidationTime: " + signatureValidationTime;
   }
 }

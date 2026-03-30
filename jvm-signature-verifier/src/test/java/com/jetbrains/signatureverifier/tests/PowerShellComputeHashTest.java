@@ -20,7 +20,7 @@ class PowerShellComputeHashTest {
     try (var channel = Files.newByteChannel(TestUtil.getTestDataFile("powershell", resourceName), StandardOpenOption.READ)) {
       PowerShellScriptFile file = new PowerShellScriptFile(channel);
       byte[] result = file.ComputeHash("SHA-256");
-      Assertions.assertEquals(expectedResult, BcExt.ConvertToHexString(result).toUpperCase());
+      Assertions.assertEquals(expectedResult, BcExt.convertToHexString(result).toUpperCase());
     }
   }
 
@@ -29,7 +29,7 @@ class PowerShellComputeHashTest {
   void CheckContentWithoutSignature(String resourceName, String eol, ByteOrderMark bom) throws Exception {
     try (var channel = Files.newByteChannel(TestUtil.getTestDataFile("powershell", resourceName), StandardOpenOption.READ)) {
       PowerShellScriptFile file = new PowerShellScriptFile(channel);
-      String content = file.GetContentWithoutSignature();
+      String content = file.getContentWithoutSignature();
       if (bom != null) {
         Assertions.assertEquals('\uFEFF', content.charAt(0));
         Assertions.assertEquals(CONTENT.replace("<EOL>", eol), content.substring(1));

@@ -21,8 +21,8 @@ class MachoArchTests {
   void MachoArchExtractTest(String machoResourceName, long expHeader1, Long expHeader2) throws Exception {
     List<Long> result;
     try (var channel = Files.newByteChannel(TestUtil.getTestDataFile("mach-o", machoResourceName), StandardOpenOption.READ)) {
-      result = new MachoArch(channel).Extract().stream()
-        .map(f -> f.Magic())
+      result = new MachoArch(channel).extract().stream()
+        .map(f -> f.magic())
         .collect(Collectors.toList());
     }
 

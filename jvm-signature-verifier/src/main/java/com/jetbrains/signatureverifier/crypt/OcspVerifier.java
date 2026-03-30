@@ -26,22 +26,22 @@ public class OcspVerifier {
   private static final String OCSP_REQUEST_TYPE = "application/ocsp-request";
   private static final String OCSP_RESPONSE_TYPE = "application/ocsp-response";
 
-  private Duration _ocspResponseTimeout = Duration.ZERO;
+  private Duration ocspResponseTimeout = Duration.ZERO;
   private final Duration ocspResponseCorrectSpan = Duration.ofMinutes(1);
 
   public OcspVerifier(Duration ocspResponseTimeout) {
-    _ocspResponseTimeout = ocspResponseTimeout;
+    this.ocspResponseTimeout = ocspResponseTimeout;
   }
 
-  public VerifySignatureResult CheckCertificateRevocationStatusAsync(
+  public VerifySignatureResult checkCertificateRevocationStatusAsync(
     X509CertificateHolder targetCert,
     X509CertificateHolder issuerCert) throws Exception {
 
-    String ocspUrl = BcExt.GetOcspUrl(targetCert);
+    String ocspUrl = BcExt.getOcspUrl(targetCert);
     if (ocspUrl == null) {
-      LOG.warn("The OCSP access data is empty in certificate {}", BcExt.FormatId(targetCert));
+      LOG.warn("The OCSP access data is empty in certificate {}", BcExt.formatId(targetCert));
       LOG.error(Messages.unable_determin_certificate_revocation_status);
-      return VerifySignatureResult.InvalidChain(Messages.unable_determin_certificate_revocation_status);
+      return VerifySignatureResult.invalidChain(Messages.unable_determin_certificate_revocation_status);
     }
 
     OCSPReqBuilder ocspReqGenerator = new OCSPReqBuilder();
@@ -53,21 +53,21 @@ public class OcspVerifier {
     CertificateID certificateIdReq = new CertificateID(digestCalculator, issuerCert, targetCert.getSerialNumber());
     ocspReqGenerator.addRequest(certificateIdReq);
     OCSPReq ocspReq = ocspReqGenerator.build();
-    OCSPResp ocspRes = getOcspResponseAsync(ocspUrl, ocspReq, _ocspResponseTimeout);
+    OCSPResp ocspRes = getOcspResponseAsync(ocspUrl, ocspReq, ocspResponseTimeout);
 
     if (ocspRes == null || ocspRes.getStatus() != OCSPResp.SUCCESSFUL) {
       LOG.error("OCSP response status: {}", ocspRes != null ? ocspRes.getStatus() : "null");
-      return VerifySignatureResult.InvalidChain(Messages.unable_determin_certificate_revocation_status);
+      return VerifySignatureResult.invalidChain(Messages.unable_determin_certificate_revocation_status);
     }
 
     BasicOCSPResp basicOcspResp = (BasicOCSPResp) ocspRes.getResponseObject();
     if (basicOcspResp == null) {
       LOG.error("Unknown OCSP response type");
-      return VerifySignatureResult.InvalidChain(Messages.unable_determin_certificate_revocation_status);
+      return VerifySignatureResult.invalidChain(Messages.unable_determin_certificate_revocation_status);
     }
 
     if (!validateOcspResponse(basicOcspResp))
-      return VerifySignatureResult.InvalidChain(Messages.invalid_ocsp_response);
+      return VerifySignatureResult.invalidChain(Messages.invalid_ocsp_response);
 
     SingleResp[] allResponses = basicOcspResp.getResponses();
     java.util.List<SingleResp> singleResponses = new java.util.ArrayList<>();
@@ -78,24 +78,24 @@ public class OcspVerifier {
 
     if (singleResponses.isEmpty()) {
       LOG.error("OCSP response not correspond to request");
-      return VerifySignatureResult.InvalidChain(Messages.invalid_ocsp_response);
+      return VerifySignatureResult.invalidChain(Messages.invalid_ocsp_response);
     }
 
     for (SingleResp singleResp : singleResponses) {
       if (!validateSingleOcspResponse(singleResp))
-        return VerifySignatureResult.InvalidChain(Messages.invalid_ocsp_response);
+        return VerifySignatureResult.invalidChain(Messages.invalid_ocsp_response);
 
       Object certStatus = singleResp.getCertStatus();
       if (certStatus == null) {
         continue;
       } else if (certStatus instanceof UnknownStatus) {
         LOG.warn(Messages.unknown_certificate_revocation_status);
-        return VerifySignatureResult.InvalidChain(Messages.unknown_certificate_revocation_status);
+        return VerifySignatureResult.invalidChain(Messages.unknown_certificate_revocation_status);
       } else if (certStatus instanceof RevokedStatus) {
         RevokedStatus certRevStatus = (RevokedStatus) certStatus;
         String msg = formatRevokedStatus(certRevStatus);
         LOG.warn(msg);
-        return VerifySignatureResult.InvalidChain(msg);
+        return VerifySignatureResult.invalidChain(msg);
       }
     }
     return VerifySignatureResult.Valid;
@@ -141,11 +141,11 @@ public class OcspVerifier {
       LOG.error("OCSP issuer certificate not found in response");
       return false;
     }
-    if (!BcExt.CanSignOcspResponses(issuerCert)) {
+    if (!BcExt.canSignOcspResponses(issuerCert)) {
       LOG.error("OCSP issuer certificate is not applicable. RFC 6960 3.2");
       return false;
     }
-    if (!issuerCert.isValidOn(Utils.ConvertToDate(nowUtc()))) {
+    if (!issuerCert.isValidOn(Utils.convertToDate(nowUtc()))) {
       LOG.error("OCSP issuer certificate is not valid now. RFC 6960 3.2");
       return false;
     }
@@ -161,12 +161,12 @@ public class OcspVerifier {
   private boolean validateSingleOcspResponse(SingleResp singleResp) {
     LocalDateTime nowInGmt = nowUtc();
     if (singleResp.getNextUpdate() != null
-      && singleResp.getNextUpdate().before(Utils.ConvertToDate(nowInGmt))) {
+      && singleResp.getNextUpdate().before(Utils.convertToDate(nowInGmt))) {
       LOG.error("OCSP response is no longer valid. RFC 6960 4.2.2.1.");
       return false;
     }
     Duration diff = Duration.between(
-      Utils.ConvertToLocalDateTime(singleResp.getThisUpdate()),
+      Utils.convertToLocalDateTime(singleResp.getThisUpdate()),
       nowInGmt
     ).abs();
     if (diff.compareTo(ocspResponseCorrectSpan) > 0) {
@@ -198,7 +198,7 @@ public class OcspVerifier {
       byte[] keyHash = responderIdObj.getKeyHash();
       if (keyHash == null) return null;
       for (X509CertificateHolder cert : certs) {
-        byte[] ki = BcExt.GetSubjectKeyIdentifierRaw(cert);
+        byte[] ki = BcExt.getSubjectKeyIdentifierRaw(cert);
         if (ki != null && Arrays.equals(keyHash, ki))
           return cert;
       }

@@ -18,7 +18,7 @@ import java.util.List;
  * Fat/Universal Mach-O file
  */
 public class MachoArch {
-  private final SeekableByteChannel _stream;
+  private final SeekableByteChannel stream;
 
   /**
    * Initializes a new instance of the MachoArch
@@ -26,7 +26,7 @@ public class MachoArch {
    * @param stream An input stream
    */
   public MachoArch(SeekableByteChannel stream) {
-    _stream = stream;
+    this.stream = stream;
   }
 
   /**
@@ -34,12 +34,12 @@ public class MachoArch {
    *
    * @return A collection of MachoFile
    */
-  public Collection<MachoFile> Extract() throws IOException {
-    BinaryReader reader = new BinaryReader(ReadUtils.rewind(_stream));
-    long masterMagic = Integer.toUnsignedLong(reader.ReadUInt32()); // mach_header::magic / mach_header64::magic / fat_header::magic
-    if (MachoUtils.IsMacho(masterMagic))
-      return Collections.singletonList(getMachoData(ReadUtils.rewind(_stream)));
-    else if (MachoUtils.IsFatMacho(masterMagic))
+  public Collection<MachoFile> extract() throws IOException {
+    BinaryReader reader = new BinaryReader(ReadUtils.rewind(stream));
+    long masterMagic = Integer.toUnsignedLong(reader.readUInt32()); // mach_header::magic / mach_header64::magic / fat_header::magic
+    if (MachoUtils.isMacho(masterMagic))
+      return Collections.singletonList(getMachoData(ReadUtils.rewind(stream)));
+    else if (MachoUtils.isFatMacho(masterMagic))
       return getFatMachoData(reader, masterMagic);
     else
       throw new InvalidDataException("Unknown format");
@@ -53,33 +53,33 @@ public class MachoArch {
 
     if (isLe32 || isLe64 || isBe32 || isBe64) {
       boolean isBe = isBe32 || isBe64;
-      int nFatArch = reader.ReadUInt32Le(isBe); // fat_header::nfat_arch
+      int nFatArch = reader.readUInt32Le(isBe); // fat_header::nfat_arch
       List<DataInfo> fatArchItems = new ArrayList<>();
 
       if (isBe64 || isLe64) {
         int n = nFatArch;
         while (n-- > 0) {
-          ReadUtils.seek(_stream, 8, SeekOrigin.Current);
-          int offset = (int) reader.ReadUInt64Le(isBe64); // fat_arch_64::offset
-          int size = (int) reader.ReadUInt64Le(isBe64);   // fat_arch_64::size
+          ReadUtils.seek(stream, 8, SeekOrigin.Current);
+          int offset = (int) reader.readUInt64Le(isBe64); // fat_arch_64::offset
+          int size = (int) reader.readUInt64Le(isBe64);   // fat_arch_64::size
           fatArchItems.add(new DataInfo(offset, size));
-          ReadUtils.seek(_stream, 8, SeekOrigin.Current);
+          ReadUtils.seek(stream, 8, SeekOrigin.Current);
         }
       } else {
         int n = nFatArch;
         while (n-- > 0) {
-          ReadUtils.seek(_stream, 8, SeekOrigin.Current);
-          int offset = reader.ReadUInt32Le(isBe32); // fat_arch::offset
-          int size = reader.ReadUInt32Le(isBe32);   // fat_arch::size
+          ReadUtils.seek(stream, 8, SeekOrigin.Current);
+          int offset = reader.readUInt32Le(isBe32); // fat_arch::offset
+          int size = reader.readUInt32Le(isBe32);   // fat_arch::size
           fatArchItems.add(new DataInfo(offset, size));
-          ReadUtils.seek(_stream, 4, SeekOrigin.Current);
+          ReadUtils.seek(stream, 4, SeekOrigin.Current);
         }
       }
 
       List<MachoFile> result = new ArrayList<>();
       for (DataInfo s : fatArchItems) {
         // Create a subrange channel over the original stream without copying data
-        result.add(new MachoFile(new SubrangeSeekableByteChannel(_stream, (long) s.Offset(), (long) s.Size())));
+        result.add(new MachoFile(new SubrangeSeekableByteChannel(stream, (long) s.getOffset(), (long) s.getSize())));
       }
       return result;
     }

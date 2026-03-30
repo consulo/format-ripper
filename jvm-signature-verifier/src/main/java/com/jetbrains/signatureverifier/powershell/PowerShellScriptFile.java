@@ -33,7 +33,7 @@ public class PowerShellScriptFile {
     script = new PowerShellScript(stream);
   }
 
-  public SignatureData GetSignatureData() {
+  public SignatureData getSignatureData() {
     byte[] bytes = script.decodeSignatureBlock();
     if (bytes == null) return SignatureData.Empty;
     return new SignatureData(null, bytes);
@@ -48,7 +48,7 @@ public class PowerShellScriptFile {
     return script.computeDigest(digest);
   }
 
-  public String GetContentWithoutSignature() {
+  public String getContentWithoutSignature() {
     return script.getContentWithoutSignatureBlock();
   }
 
@@ -59,7 +59,7 @@ public class PowerShellScriptFile {
   /**
    * Returns VerifySignatureResult with either Valid or InvalidSignature status
    */
-  public VerifySignatureResult VerifyContentHash(CMSSignedData signedData, PowerShellScriptFile file) {
+  public VerifySignatureResult verifyContentHash(CMSSignedData signedData, PowerShellScriptFile file) {
     try {
       if (signedData.getDigestAlgorithmIDs().size() != 1) {
         return invalid("Signed Data must contain exactly one DigestAlgorithm, got: " + signedData.getDigestAlgorithmIDs());

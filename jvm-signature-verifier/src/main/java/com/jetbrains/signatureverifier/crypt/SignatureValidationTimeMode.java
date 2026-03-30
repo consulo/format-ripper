@@ -1,7 +1,7 @@
 package com.jetbrains.signatureverifier.crypt;
 
 public enum SignatureValidationTimeMode {
-  /** Extract a timestamp or signing time (1.2.840.113549.1.9.5) from a signed message */
+  /** extract a timestamp or signing time (1.2.840.113549.1.9.5) from a signed message */
   Timestamp,
 
   /** Validate signatures in the current time */

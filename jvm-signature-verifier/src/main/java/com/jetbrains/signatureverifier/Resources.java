@@ -3,7 +3,7 @@ package com.jetbrains.signatureverifier;
 import java.io.InputStream;
 
 public final class Resources {
-  public static InputStream GetDefaultRoots() {
+  public static InputStream getDefaultRoots() {
     return getResourceStream("DefaultRoots.p7b");
   }
 

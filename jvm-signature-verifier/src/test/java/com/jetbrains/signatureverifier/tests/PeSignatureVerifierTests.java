@@ -28,11 +28,11 @@ class PeSignatureVerifierTests {
     try (SeekableByteChannel channel = TestUtil.getTestByteChannel("pe", peResourceName)) {
       SignatureVerificationParams verificationParams = new SignatureVerificationParams(null, null, false, false);
       PeFile peFile = new PeFile(channel);
-      var signatureData = peFile.GetSignatureData();
-      var signedMessage = SignedMessage.CreateInstance(signatureData);
+      var signatureData = peFile.getSignatureData();
+      var signedMessage = SignedMessage.createInstance(signatureData);
       SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
-      var result = signedMessageVerifier.VerifySignatureAsync(signedMessage, verificationParams);
-      Assertions.assertEquals(expectedResult, result.Status());
+      var result = signedMessageVerifier.verifySignatureAsync(signedMessage, verificationParams);
+      Assertions.assertEquals(expectedResult, result.getStatus());
     }
   }
 
@@ -48,11 +48,11 @@ class PeSignatureVerifierTests {
         codesignroots, timestamproots, true, false
       );
       PeFile peFile = new PeFile(peFileStream);
-      var signatureData = peFile.GetSignatureData();
-      var signedMessage = SignedMessage.CreateInstance(signatureData);
+      var signatureData = peFile.getSignatureData();
+      var signedMessage = SignedMessage.createInstance(signatureData);
       SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
-      var result = signedMessageVerifier.VerifySignatureAsync(signedMessage, verificationParams);
-      Assertions.assertEquals(expectedResult, result.Status());
+      var result = signedMessageVerifier.verifySignatureAsync(signedMessage, verificationParams);
+      Assertions.assertEquals(expectedResult, result.getStatus());
     }
   }
 
@@ -61,9 +61,9 @@ class PeSignatureVerifierTests {
   void VerifySignWithChainTestInPast(String peResourceName, VerifySignatureStatus expectedResult,
                                      String codesignRoot, String timestampRoot) throws Exception {
     VerifySignatureResult actual = verifySignWithChainInTime(
-      peResourceName, codesignRoot, timestampRoot, Utils.ConvertToLocalDateTime(new Date(Long.MIN_VALUE))
+      peResourceName, codesignRoot, timestampRoot, Utils.convertToLocalDateTime(new Date(Long.MIN_VALUE))
     );
-    Assertions.assertEquals(expectedResult, actual.Status());
+    Assertions.assertEquals(expectedResult, actual.getStatus());
   }
 
   @ParameterizedTest
@@ -73,7 +73,7 @@ class PeSignatureVerifierTests {
     VerifySignatureResult actual = verifySignWithChainInTime(
       peResourceName, codesignRoot, timestampRoot, LocalDateTime.now()
     );
-    Assertions.assertEquals(expectedResult, actual.Status());
+    Assertions.assertEquals(expectedResult, actual.getStatus());
   }
 
   @ParameterizedTest
@@ -81,9 +81,9 @@ class PeSignatureVerifierTests {
   void VerifySignWithChainTestInFuture(String peResourceName, VerifySignatureStatus expectedResult,
                                        String codesignRoot, String timestampRoot) throws Exception {
     VerifySignatureResult actual = verifySignWithChainInTime(
-      peResourceName, codesignRoot, timestampRoot, Utils.ConvertToLocalDateTime(new Date(Long.MAX_VALUE))
+      peResourceName, codesignRoot, timestampRoot, Utils.convertToLocalDateTime(new Date(Long.MAX_VALUE))
     );
-    Assertions.assertEquals(expectedResult, actual.Status());
+    Assertions.assertEquals(expectedResult, actual.getStatus());
   }
 
   @ParameterizedTest
@@ -93,7 +93,7 @@ class PeSignatureVerifierTests {
     VerifySignatureResult actual = verifySignWithChainInTime(
       peResourceName, codesignRoot, timestampRoot, LocalDateTime.of(2019, 11, 24, 0, 0)
     );
-    Assertions.assertEquals(expectedResult, actual.Status());
+    Assertions.assertEquals(expectedResult, actual.getStatus());
   }
 
   private VerifySignatureResult verifySignWithChainInTime(String peResourceName,
@@ -108,10 +108,10 @@ class PeSignatureVerifierTests {
         SignatureValidationTimeMode.SignValidationTime, time
       );
       PeFile peFile = new PeFile(peFileStream);
-      var signatureData = peFile.GetSignatureData();
-      var signedMessage = SignedMessage.CreateInstance(signatureData);
+      var signatureData = peFile.getSignatureData();
+      var signedMessage = SignedMessage.createInstance(signatureData);
       SignedMessageVerifier signedMessageVerifier = new SignedMessageVerifier();
-      return signedMessageVerifier.VerifySignatureAsync(signedMessage, verificationParams);
+      return signedMessageVerifier.verifySignatureAsync(signedMessage, verificationParams);
     }
   }
 
@@ -121,7 +121,7 @@ class PeSignatureVerifierTests {
     try (SeekableByteChannel channel = TestUtil.getTestByteChannel("pe", peResourceName)) {
       PeFile peFile = new PeFile(channel);
       byte[] result = peFile.ComputeHash(alg);
-      Assertions.assertEquals(expectedResult, BcExt.ConvertToHexString(result).toUpperCase());
+      Assertions.assertEquals(expectedResult, BcExt.convertToHexString(result).toUpperCase());
     }
   }
 
@@ -130,7 +130,7 @@ class PeSignatureVerifierTests {
   void IsDotNetTest(String peResourceName, boolean expectedResult) throws Exception {
     try (SeekableByteChannel channel = TestUtil.getTestByteChannel("pe", peResourceName)) {
       PeFile peFile = new PeFile(channel);
-      Assertions.assertEquals(expectedResult, peFile.IsDotNet());
+      Assertions.assertEquals(expectedResult, peFile.isDotNet());
     }
   }
 
